@@ -24,7 +24,8 @@ remover** os filtros de Órgão e Perfil (provocação da gestora — ATA SGD/SE
 | `src/analysis/metrics.py` | Cálculo puro (proxy, correção, distribuição, decisão). |
 | `src/discovery/probe_instrumentation.py` | Fase 1 reprodutível (Playwright). |
 | `src/run_study.py` | Orquestrador da Fase 2 (expõe `compute()` reutilizável). |
-| `app.py` | Dashboard Streamlit (apresentação). |
+| `src/ui/` | Camada de apresentação do BI (theme, sidebar, sections, cards). |
+| `app.py` | Orquestrador do dashboard (fino). |
 
 ## Setup
 ```bash
@@ -33,8 +34,8 @@ playwright install chromium          # só para a Fase 1
 cp .env.example .env                 # preencher MATOMO_TOKEN
 ```
 
-> A janela do estudo é fixada em **ano de 2025** dentro de `src/run_study.py`
-> (`STUDY_WINDOW`), independente de overrides no `.env`.
+> O CLI `run_study` usa janela fixa **ano de 2025** (`STUDY_WINDOW` em
+> `src/run_study.py`). No dashboard, a janela é escolhida dinamicamente na sidebar.
 
 ## Executar
 ```bash
@@ -50,13 +51,22 @@ streamlit run app.py          # http://localhost:8501
 python -m streamlit run app.py
 ```
 
-## Dashboard (`app.py`)
-- KPIs: visitas da home, atribuíveis, proxy ingênuo e **taxa corrigida**.
+## Dashboard institucional (`app.py` + `src/ui/`)
+BI com identidade visual do **Governo de MS** (gov DS, `#004F9F`, fonte Raleway):
+- **Cabeçalho institucional** com logo ms.gov.br.
+- **Calendário** na sidebar (Dia/Semana/Mês/Ano/Intervalo, `DD/MM/YYYY`) → chama a API
+  Matomo on-demand, com cache por janela (`@st.cache_data`).
+- **Storytelling de gestor:** frase-âncora ("de cada 1.000 visitantes, ~N usam o
+  filtro"), **funil de 3 etapas** (home → abriram serviço → vieram pelo filtro) e KPIs
+  em linguagem simples (*acesso bruto* vs *uso real do filtro*).
 - Recomendação MANTER/REMOVER em destaque.
-- Gráfico de distribuição por perfil e **Top serviços** (1 barra por serviço, com o
-  quantitativo rotulado em cada barra; formato pt-BR).
-- Tabela detalhada com link para cada serviço no portal.
-- Contraste validado em tema **claro e escuro** (paleta acessível AA).
+- Distribuição por perfil e **Top serviços** (1 barra por serviço, rótulo pt-BR).
+- **Cards estilo portal** (`src/ui/cards.py`): abas por perfil
+  (Cidadão/Servidor/Empresa/Gestão), categoria + ícone + visitas + link.
+
+Camada de apresentação isolada em `src/ui/` (SRP): `theme.py` (tokens/CSS/header),
+`sidebar.py` (calendário), `sections.py` (KPIs/narrativa/gráficos), `cards.py` (cards).
+Tema base em `.streamlit/config.toml`.
 
 ## Resultado da Fase 1 (descoberta — 28/05/2026)
 - Matomo ativo (`idSite=298`); pageview registrado em cada navegação.
