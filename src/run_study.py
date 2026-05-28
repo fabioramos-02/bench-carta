@@ -29,15 +29,21 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 STUDY_WINDOW = {"period": "year", "date": "2025-01-01"}
 
 
-def run() -> None:
+def compute(window: dict | None = None):
+    """Executa a extração e devolve (resultado, linhas-por-serviço, visitas-home).
+
+    Núcleo reutilizável por CLI (`run`) e dashboard (Streamlit). Sem I/O de arquivo.
+    """
     client = get_client()
-    index = fetch_page_index(client, **STUDY_WINDOW)
+    index = fetch_page_index(client, **(window or STUDY_WINDOW))
     visitors = home_visits(index)
-
     rows = _collect_rows(index)
-    per_profile = _attributable_totals(index)
+    result = build_result(visitors, _attributable_totals(index))
+    return result, rows, visitors
 
-    result = build_result(visitors, per_profile)
+
+def run() -> None:
+    result, rows, _ = compute()
     _write_csv(rows)
     _print_summary(result)
 
