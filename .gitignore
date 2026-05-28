@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/*.csv
+.playwright-mcp/
+.streamlit/secrets.toml
