@@ -38,21 +38,20 @@ html, body, [class*="css"] {{ font-family: 'Open Sans', sans-serif; }}
 .bi-header .bi-title {{ color: #fff; font-weight: 700; font-size: 1.4rem; line-height: 1.15; }}
 .bi-header .bi-sub {{ color: #DCEAFB; font-size: .85rem; }}
 
-/* Barra de abas idêntica ao portal: caixa full-width, células iguais, ativa preenchida */
-div[data-testid="stElementContainer"]:has(div[data-testid="stButtonGroup"]) {{ width: 100% !important; }}
-div[data-testid="stButtonGroup"] div:has(> button) {{
-  display: inline-flex !important; gap: 0;
+/* Barra de abas idêntica ao portal: caixa, células iguais, ativa preenchida */
+div[data-testid="stButtonGroup"] {{ width: 100%; }}
+div[data-testid="stButtonGroup"] > div {{
+  display: flex; width: 100%; gap: 0;
   border: 0.8px solid {BORDER}; border-radius: 4px; overflow: hidden;
 }}
 div[data-testid="stButtonGroup"] button {{
-  flex: 0 0 auto; margin: 0 !important; min-height: 0 !important;
+  flex: 1 1 0; margin: 0 !important; min-height: 0 !important;
   border: none !important; border-radius: 0 !important;
   background: #fff !important; color: {PRIMARY} !important;
   font-family: 'Open Sans', sans-serif; font-weight: 700 !important; font-size: 14px !important;
-  text-transform: uppercase; letter-spacing: -.1px; padding: 15px 26px !important;
+  text-transform: uppercase; letter-spacing: -.1px; padding: 15px 8px !important;
   border-right: 0.8px solid {BORDER} !important; transition: background .12s;
 }}
-div[data-testid="stButtonGroup"] button p {{ overflow: visible !important; text-overflow: clip !important; white-space: nowrap; }}
 div[data-testid="stButtonGroup"] button:last-child {{ border-right: none !important; }}
 div[data-testid="stButtonGroup"] button:hover {{ background: #F2F6FC !important; }}
 div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"] {{

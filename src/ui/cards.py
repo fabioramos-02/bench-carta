@@ -11,13 +11,13 @@ import streamlit as st
 from src.config import PORTAL_BASE_URL
 from src.ui import PROFILE_LABEL
 
-# prefixo do path -> (categoria legível, ícone Material Symbols)
+# prefixo do path -> (categoria legível, ícone Material Icons filled)
 _CATEGORY = {
-    "financas-e-impostos": ("Finanças e Impostos", "request_quote"),
-    "saude-e-cuidado": ("Saúde e Cuidado", "medical_services"),
+    "financas-e-impostos": ("Finanças e Impostos", "currency_exchange"),
+    "saude-e-cuidado": ("Saúde e Cuidado", "local_hospital"),
     "transito-e-transportes": ("Trânsito e Transportes", "directions_car"),
-    "seguranca": ("Segurança", "shield"),
-    "empresa-industria-e-comercio": ("Empresa, Indústria e Comércio", "apartment"),
+    "seguranca": ("Segurança", "security"),
+    "empresa-industria-e-comercio": ("Empresa, Indústria e Comércio", "business"),
     "assistencia-social": ("Assistência Social", "groups"),
     "ciencia-e-tecnologia": ("Ciência e Tecnologia", "biotech"),
 }
@@ -32,22 +32,32 @@ def _category(path: str) -> tuple[str, str]:
 
 
 def service_cards(df: pd.DataFrame) -> None:
-    """Abas por perfil + grid de cards (2 colunas) estilo portal."""
-    st.subheader("Serviços em destaque por perfil")
-    st.caption("Mesma organização do portal: escolha o perfil para ver seus serviços.")
+    """Barra de perfil (estilo portal) + grid de cards (2 colunas)."""
+    st.markdown("### Serviços em destaque")
+    st.caption("Serviços recomendados por público alvo — mesma organização do portal.")
 
-    profiles = list(PROFILE_LABEL)
-    tabs = st.tabs([PROFILE_LABEL[p] for p in profiles])
-    for tab, profile in zip(tabs, profiles):
-        with tab:
-            subset = df[df["perfil"] == profile].sort_values("visitas", ascending=False)
-            if subset.empty:
-                st.info("Sem serviços em destaque para este perfil.")
-                continue
-            cols = st.columns(2)
-            for i, (_, row) in enumerate(subset.iterrows()):
-                with cols[i % 2]:
-                    _card(row)
+    # Rótulos curtos na barra (cabem sem truncar); ordem do portal
+    tab_label = {
+        "CIDADAO": "Cidadão",
+        "SERVIDOR_PUBLICO": "Servidor",
+        "EMPRESA": "Empresa",
+        "GESTAO_PUBLICA": "Gestão",
+    }
+    by_label = {v: k for k, v in tab_label.items()}
+    chosen = st.segmented_control(
+        "Perfil", list(by_label), default="Cidadão", label_visibility="collapsed"
+    )
+    profile = by_label.get(chosen or "Cidadão", "CIDADAO")
+
+    # Preserva a ORDEM do portal (ordem de HIGHLIGHTED_SERVICES), sem reordenar por visitas
+    subset = df[df["perfil"] == profile]
+    if subset.empty:
+        st.info("Sem serviços em destaque para este perfil.")
+        return
+    cols = st.columns(2)
+    for i, (_, row) in enumerate(subset.iterrows()):
+        with cols[i % 2]:
+            _card(row)
 
 
 def _card(row: pd.Series) -> None:
