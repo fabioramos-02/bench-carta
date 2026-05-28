@@ -97,24 +97,59 @@ def _distribution_chart(result) -> None:
         }
     )
     fig = px.bar(data, x="Perfil", y="Visitas", text="Visitas", color="Perfil")
-    fig.update_layout(showlegend=False, height=380)
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(
+        texttemplate="%{y:,.0f}", textposition="auto", textfont_size=12, cliponaxis=False
+    )
+    fig.update_yaxes(separatethousands=True)
+    fig.update_layout(
+        showlegend=False,
+        height=380,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+        separators=",.",  # pt-BR: decimal ',' milhar '.'
+    )
+    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
     st.caption("Empresa e Gestão Pública: sem serviço exclusivo → não atribuíveis.")
+
+
+# Cores acessíveis (contraste AA em tema claro e escuro)
+_TIPO_COLORS = {"Exclusivo": "#0E9F8E", "Compartilhado": "#9AA0A6"}
 
 
 def _services_chart(df: pd.DataFrame) -> None:
     st.subheader("Top serviços em destaque por visitas (2025)")
-    top = df.sort_values("visitas", ascending=False).head(10)
+    # 1 barra por serviço: dedupe por path mantendo maior visita e o flag exclusivo
+    dedup = (
+        df.sort_values("visitas", ascending=False)
+        .drop_duplicates(subset="path", keep="first")
+        .head(10)
+        .copy()
+    )
+    dedup["tipo"] = dedup["exclusivo"].map({True: "Exclusivo", False: "Compartilhado"})
     fig = px.bar(
-        top,
+        dedup,
         x="visitas",
         y="servico",
-        color="exclusivo",
+        color="tipo",
         orientation="h",
-        labels={"servico": "", "visitas": "Visitas", "exclusivo": "Exclusivo"},
+        text="visitas",
+        color_discrete_map=_TIPO_COLORS,
+        labels={"servico": "", "visitas": "Visitas", "tipo": "Tipo"},
     )
-    fig.update_layout(height=380, yaxis={"categoryorder": "total ascending"})
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(
+        texttemplate="%{x:,.0f}", textposition="auto", textfont_size=12, cliponaxis=False
+    )
+    fig.update_xaxes(separatethousands=True)
+    fig.update_layout(
+        height=400,
+        yaxis={"categoryorder": "total ascending"},
+        legend_title_text="Tipo",
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+        margin={"l": 8, "r": 24, "t": 8, "b": 8},
+        separators=",.",  # pt-BR: decimal ',' milhar '.'
+    )
+    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
 
 def _services_table(df: pd.DataFrame) -> None:
