@@ -8,13 +8,20 @@ remover os filtros de Órgão e Perfil.
 ---
 
 ## Resumo executivo
-- O "filtro de Perfil" (abas *Serviços em Destaque*) é, hoje, **invisível ao Matomo**:
-  trocar de aba não gera evento nem pageview.
-- Só dá para medir **indiretamente**, pelos cliques em serviços **exclusivos** de cada
-  perfil que partem da home.
-- **Recomendação preliminar:** antes de decidir remover, instrumentar event tracking
-  no clique da aba — sem isso, qualquer número é um *proxy* com viés. Os números do
-  *proxy* (Fase 2) entram aqui após a extração.
+- **Base do estudo:** ano de **2025** completo (`period=year`, `idSite=298`).
+- O "filtro de Perfil" (abas *Serviços em Destaque*) é **invisível ao Matomo**: trocar
+  de aba não gera evento nem pageview. Só dá para medir por *proxy* (cliques em
+  serviços exclusivos de cada perfil).
+- O *proxy* ingênuo (visitas a serviços exclusivos ÷ visitas da home) dá **6,05%** —
+  mas é **inflado**: esses serviços são acessados majoritariamente **direto/busca**,
+  não pelo filtro. Amostra de transições mostra que só **~1–2,5%** das visitas a esses
+  serviços vêm da home.
+- **Estimativa corrigida do uso real do filtro: ~0,1% dos visitantes da home** — uma a
+  duas ordens de grandeza **abaixo** do limiar de 2%. A aba **Servidor Público** é
+  praticamente morta (**366 visitas/ano** somando todos os serviços exclusivos).
+- **Recomendação:** o filtro de Perfil agrega valor desprezível ao acesso a serviços →
+  **forte sinal para REMOVER** (ou redesenhar). Para um número exato e auditável,
+  instrumentar *event tracking* no clique da aba antes de ciclos futuros.
 
 ---
 
@@ -60,25 +67,55 @@ TVF/TA (Empresa+Gestão).
 
 ---
 
-## Fase 2 — Extração e métricas (a executar)
-Rodar `python -m src.run_study` com `MATOMO_TOKEN` definido. Preencher:
+## Fase 2 — Extração e métricas (ano 2025)
+Fonte: 1 chamada `Actions.getPageUrls` (flat, `period=year`, `date=2025-01-01`).
+Saída bruta: `data/uso-filtro-perfil-2025.csv`. (`Transitions` por ano/mês retorna
+**504 Gateway Timeout** no servidor — só roda em janela diária; ver amostra abaixo.)
 
-| Indicador | Valor | Fonte (API) |
+| Indicador | Valor 2025 | Fonte (API) |
 |---|---|---|
-| Janela analisada | _(ex.: last180)_ | `config.DEFAULT_DATE` |
-| Visitantes da home | ⚠️ a extrair | `VisitsSummary.get` |
-| Interações atribuíveis (home→serviço exclusivo) | ⚠️ a extrair | `Transitions.getTransitionsForPageUrl` |
-| **Taxa de adoção** | ⚠️ a calcular | métrica = interações ÷ visitantes |
+| Janela analisada | ano 2025 (`year` / `2025-01-01`) | `Actions.getPageUrls` |
+| Visitas da home (`/`) | **2.316.711** | `Actions.getPageUrls` |
+| Visitas a serviços exclusivos (proxy ingênuo) | **140.095** | idem |
+| **Proxy ingênuo de adoção** | **6,05%** ⚠️ limite superior inflado | 140.095 ÷ 2.316.711 |
 
-Distribuição por perfil (Cidadão vs. Servidor — únicos atribuíveis): ⚠️ a preencher.
+### Distribuição entre perfis atribuíveis (proxy ingênuo)
+| Perfil | Visitas (exclusivos) | Participação |
+|---|---|---|
+| Cidadão | 139.729 | **99,7%** |
+| Servidor Público | 366 | 0,3% |
+| Empresa / Gestão | — | não atribuível (sem serviço exclusivo) |
+
+Cidadão é dominado por serviços de alto tráfego acessados **direto**, não pelo filtro:
+DEVIR **95.297**, CNH **19.284**, Boletim de acidente **17.826**, Mais Social **7.322**.
+
+### Correção: quanto vem REALMENTE da home (amostra de Transitions, dias de 2025)
+| Serviço | pageviews (4 dias) | refs da home | % home |
+|---|---|---|---|
+| DEVIR | 2.674 | 66 | **2,47%** |
+| CNH | 392 | 6 | **1,53%** |
+| CRLV-e | 4.533 | 43 | **0,95%** |
+
+Aplicando ~1,5% (fração média vinda da home) ao volume anual atribuível:
+`140.095 × 0,015 ≈ 2.100 visitas/ano` chegando via home → **~0,09% dos visitantes da
+home**. E mesmo essas incluem menu e busca da home, não só o card de Perfil → o uso do
+filtro é **ainda menor**.
 
 ---
 
-## Fase 3 — Recomendação (a consolidar pós-Fase 2)
-Critério: **REMOVER** se taxa de adoção `< 2%`; **MANTER** se `≥ 2%` (limiar ajustável).
+## Fase 3 — Recomendação
+Critério: **REMOVER** se taxa de adoção `< 2%`; **MANTER** se `≥ 2%`.
 
-> Independente do número, registrar a recomendação metodológica: **implementar event
-> tracking na troca de aba** para medir o filtro com precisão em ciclos futuros.
+- Proxy ingênuo (6,05%) **não** serve de base: conta tráfego direto que nada tem a ver
+  com o filtro.
+- Métrica corrigida (**~0,1%**) está **muito abaixo** do limiar → **recomendação:
+  REMOVER** o filtro de Perfil (ou substituí-lo por categorias/busca, alinhado à
+  Proposta 2 de reorganização).
+- A aba **Servidor Público** é injustificável: 366 acessos/ano a serviços internos da
+  SETDIG num portal com 2,3M de visitas na home.
+- **Ressalva metodológica:** para um número exato e auditável (sem extrapolação de
+  amostra), instrumentar *event tracking* no clique da aba. Mas a evidência atual já é
+  suficiente para indicar uso desprezível.
 
 ---
 

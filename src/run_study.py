@@ -85,7 +85,11 @@ def _print_summary(result) -> None:
     print("\n=== Uso do Filtro de Perfil (base 2025) ===")
     print(f"Visitas da home: {result.home_visitors}")
     print(f"Visitas atribuíveis (serviços exclusivos): {result.attributable_interactions}")
-    print(f"Taxa de adoção: {result.adoption_rate:.2%} (limiar {result.threshold:.0%})")
+    print(f"Proxy ingênuo (limite superior): {result.proxy_rate:.2%}")
+    print(
+        f"Taxa corrigida (×{result.home_fraction:.1%} via home): "
+        f"{result.corrected_rate:.3%} (limiar {result.threshold:.0%})"
+    )
     print("Distribuição entre perfis atribuíveis:")
     for profile, share in result.distribution.items():
         print(f"  - {profile}: {share:.1%} ({result.per_profile_counts[profile]})")

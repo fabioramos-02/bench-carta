@@ -39,6 +39,7 @@ def probe() -> dict:
         page.on("request", lambda r: events.append(r.url) if _MATOMO in r.url else None)
 
         page.goto(PORTAL_HOME_URL, wait_until="networkidle")
+        _dismiss_cookie_banner(page)
         before_events = len(events)
         url_before = page.url
 
@@ -59,6 +60,23 @@ def probe() -> dict:
         "method": _classify(new_events > 0, url_before != url_after, services),
     }
     return verdict
+
+
+def _dismiss_cookie_banner(page) -> None:
+    """Fecha o banner de consentimento OneTrust, que intercepta cliques."""
+    for selector in (
+        "#onetrust-accept-btn-handler",
+        "#onetrust-reject-all-handler",
+        "button:has-text('Aceitar')",
+    ):
+        try:
+            btn = page.locator(selector).first
+            if btn.is_visible(timeout=3000):
+                btn.click()
+                page.wait_for_timeout(400)
+                return
+        except Exception:
+            continue
 
 
 def _collect_service_links(page) -> list[str]:

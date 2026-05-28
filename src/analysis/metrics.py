@@ -7,14 +7,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.config import ADOPTION_THRESHOLD
+from src.config import ADOPTION_THRESHOLD, HOME_REFERRAL_FRACTION
 
 
 @dataclass(frozen=True)
 class StudyResult:
     home_visitors: int
     attributable_interactions: int
-    adoption_rate: float
+    proxy_rate: float  # limite superior ingênuo (visitas totais ÷ home)
+    corrected_rate: float  # ajustado pela fração que vem da home
+    home_fraction: float
     distribution: dict[str, float]
     per_profile_counts: dict[str, int]
     threshold: float
@@ -45,16 +47,25 @@ def build_result(
     home_visitors: int,
     per_profile_counts: dict[str, int],
     threshold: float = ADOPTION_THRESHOLD,
+    home_fraction: float = HOME_REFERRAL_FRACTION,
 ) -> StudyResult:
-    """Consolida contagens por perfil no resultado final do estudo."""
+    """Consolida contagens por perfil no resultado final do estudo.
+
+    `proxy_rate` é o limite superior (todas as visitas aos serviços exclusivos).
+    `corrected_rate` aplica a fração empírica que realmente chega via home.
+    A decisão usa a taxa corrigida.
+    """
     interactions = sum(per_profile_counts.values())
-    rate = adoption_rate(interactions, home_visitors)
+    proxy = adoption_rate(interactions, home_visitors)
+    corrected = proxy * home_fraction
     return StudyResult(
         home_visitors=home_visitors,
         attributable_interactions=interactions,
-        adoption_rate=rate,
+        proxy_rate=proxy,
+        corrected_rate=corrected,
+        home_fraction=home_fraction,
         distribution=profile_distribution(per_profile_counts),
         per_profile_counts=dict(per_profile_counts),
         threshold=threshold,
-        recommendation=decide(rate, threshold),
+        recommendation=decide(corrected, threshold),
     )

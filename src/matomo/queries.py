@@ -71,4 +71,5 @@ def _normalize(url: str) -> str:
 
 
 def _is_home(url: str) -> bool:
+    # Transitions rotula a home como 'ms.gov.br/' (sem esquema). _normalize cobre.
     return _normalize(url) in ("/", "/index", "")
