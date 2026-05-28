@@ -39,9 +39,9 @@ def service_cards(df: pd.DataFrame) -> None:
     # Rótulos curtos na barra (cabem sem truncar); ordem do portal
     tab_label = {
         "CIDADAO": "Cidadão",
-        "SERVIDOR_PUBLICO": "Servidor",
+        "SERVIDOR_PUBLICO": "Servidor Público",
         "EMPRESA": "Empresa",
-        "GESTAO_PUBLICA": "Gestão",
+        "GESTAO_PUBLICA": "Gestão Pública",
     }
     by_label = {v: k for k, v in tab_label.items()}
     chosen = st.segmented_control(
