@@ -78,7 +78,29 @@ def _funnel(result) -> None:
         )
     )
     fig.update_layout(height=300, margin={"l": 8, "r": 8, "t": 8, "b": 8}, separators=",.")
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
+
+
+def workspace_funnel(rows: list[dict]) -> None:
+    """Funil da área logada: Entrar (login gov.br) → Área logada → Meus Sistemas."""
+    by = {r["categoria"]: r for r in rows}
+    steps = [
+        ("Meu Perfil", "Entrar · login gov.br"),
+        ("Área logada", "Área logada"),
+        ("Meus Sistemas", "Meus Sistemas"),
+    ]
+    y = [rotulo for _, rotulo in steps]
+    x = [by.get(cat, {}).get("pessoas", 0) for cat, _ in steps]
+    fig = go.Figure(
+        go.Funnel(
+            y=y,
+            x=x,
+            texttemplate="%{value:,.0f} (%{percentInitial:.0%})",
+            marker={"color": [t.PRIMARY, t.COMPARTILHADO, t.EXCLUSIVO]},
+        )
+    )
+    fig.update_layout(height=280, margin={"l": 8, "r": 8, "t": 8, "b": 8}, separators=",.")
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
 
 
 def distribution_chart(result) -> None:
@@ -96,7 +118,7 @@ def distribution_chart(result) -> None:
     fig.update_yaxes(separatethousands=True)
     fig.update_layout(showlegend=False, height=380, uniformtext_minsize=10,
                       uniformtext_mode="hide", separators=",.")
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
     st.caption("Empresa e Gestão Pública: sem serviço exclusivo → não atribuíveis.")
 
 
@@ -122,7 +144,7 @@ def services_chart(df: pd.DataFrame) -> None:
                       legend_title_text="Tipo", uniformtext_minsize=10,
                       uniformtext_mode="hide", margin={"l": 8, "r": 24, "t": 8, "b": 8},
                       separators=",.")
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
 
 
 def recommendation(result) -> None:

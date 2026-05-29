@@ -114,7 +114,7 @@ def render() -> None:
                  f"{total_svc} serviços")
         with cols[i % _COLS]:
             if st.button(label, icon=f":material/{c['icon']}:",
-                         key=f"cat_{c['categoria']}", use_container_width=True):
+                         key=f"cat_{c['categoria']}", width="stretch"):
                 _modal(c, tipo)
 
     st.divider()
@@ -210,7 +210,7 @@ def _graficos(categorias: list[dict], tot: dict) -> None:
         uniformtext={"minsize": 12, "mode": "show"},
         plot_bgcolor="white",
     )
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
 
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -225,4 +225,4 @@ def _graficos(categorias: list[dict], tot: dict) -> None:
         fig2.update_traces(textinfo="label+value+percent")
         fig2.update_layout(height=300, showlegend=False, separators=",.",
                            margin={"l": 8, "r": 8, "t": 8, "b": 8})
-        st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
+        st.plotly_chart(fig2, width="stretch", theme="streamlit")

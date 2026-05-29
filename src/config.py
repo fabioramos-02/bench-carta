@@ -37,12 +37,15 @@ PORTAL_HOME_URL = f"{PORTAL_BASE_URL}/"
 MATOMO_API_URL = "https://webanalytics.ms.gov.br/index.php"
 ID_SITE = 298
 
-# --- Acessos por categoria (demanda BI) --------------------------------------
-# Páginas do portal (Matomo) cujas pessoas únicas queremos contar. O fluxo é
-# SSO gov.br -> /workspace (meu perfil) -> /workspace/minha-area/meus-sistemas.
+# --- Funil da área logada (demanda BI) ---------------------------------------
+# Jornada: Entrar (SSO gov.br) -> Área logada (/workspace) -> Meus Sistemas.
+# Valores são TRECHOS de URL casados por `pageUrl=@<trecho>` (contém), NÃO URLs
+# exatas: o `/workspace` tem 2 variantes de URL no Matomo e `pageUrl==` (exato)
+# subconta (pegava só ~2.5k de ~9k). Ordem do dict = ordem do funil.
 WORKSPACE_PAGES = {
-    "Meu Perfil": f"{PORTAL_BASE_URL}/workspace",
-    "Meus Sistemas": f"{PORTAL_BASE_URL}/workspace/minha-area/meus-sistemas",
+    "Meu Perfil": "/login/callback",                        # retorno do SSO gov.br (Entrar)
+    "Área logada": "/workspace",                            # entrou na área autenticada
+    "Meus Sistemas": "/workspace/minha-area/meus-sistemas",  # abriu Meus Sistemas
 }
 
 # Categorias do app MS Digital (GA4) -> rótulo exato da tela (unifiedScreenName).

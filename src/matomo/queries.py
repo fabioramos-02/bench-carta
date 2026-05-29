@@ -39,19 +39,21 @@ def service_visits(index: dict[str, int], path: str) -> int:
     return index.get(_normalize(path), 0)
 
 
-def page_unique_visitors(client: MatomoClient, page_url: str, **window: Any) -> tuple[int, int]:
-    """Pessoas únicas e visitas de uma página específica do portal.
+def page_unique_visitors(client: MatomoClient, page_pattern: str, **window: Any) -> tuple[int, int]:
+    """Pessoas únicas e visitas das visitas que tocaram um trecho de URL.
 
     Visitante único por página não vem no relatório plano de getPageUrls; usa-se
-    `VisitsSummary.get` com `segment=pageUrl==<url>`, que devolve nb_uniq_visitors
-    das visitas que passaram por aquela URL.
+    `VisitsSummary.get` com `segment=pageUrl=@<trecho>` (CONTÉM, não exato). O
+    operador `==` subconta páginas com mais de uma variante de URL — ex.:
+    `/workspace` tem 2 URLs no Matomo, e `pageUrl==` pegava só uma (~2.5k de ~9k).
+    `=@` casa todas as visitas cuja URL contém o trecho.
 
     Retorna: (nb_uniq_visitors, nb_visits). Em período fechado (range/month) o
     summary vem como dict de métricas; aqui só lidamos com esse caso.
     """
     data = client.call(
         "VisitsSummary.get",
-        segment=f"pageUrl=={page_url}",
+        segment=f"pageUrl=@{page_pattern}",
         **window,
     )
     if not isinstance(data, dict):

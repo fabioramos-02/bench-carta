@@ -77,20 +77,22 @@ def _secao_workspace(window: dict) -> None:
     mes = primeira[:7] if len(primeira) >= 7 else date.today().strftime("%Y-%m")
     st.markdown("### Área logada ms.gov.br")
     st.caption(
-        "Fluxo do cidadão na área autenticada: clica em **Entrar** e loga com a "
-        "conta **gov.br** (Meu Perfil); depois pode abrir **Meus Sistemas**."
+        "Jornada do cidadão autenticado: clica em **Entrar** e loga com a conta "
+        "**gov.br** (Meu Perfil) → entra na **Área logada** → abre **Meus Sistemas**."
     )
     try:
         rows = _load_portal(mes)
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Workspace indisponível: {exc}")
         return
+    sections.workspace_funnel(rows)
     cards.workspace_cards(rows, mes)
     st.info(
-        "**Como ler:** *Meu Perfil* conta quem autenticou na área logada; "
-        "*Meus Sistemas* conta quem chegou à lista de sistemas. Como *Meus Sistemas* "
-        "tem mais pessoas que *Meu Perfil*, parte do público entra direto nessa página "
-        "(favoritos/links salvos), sem passar pela home da área logada.",
+        "**Como ler:** o funil cai a cada passo — da multidão que faz login via "
+        "gov.br, uma fração entra na área logada e uma fração menor abre Meus "
+        "Sistemas. *Pessoas* = visitantes únicos no mês (o Matomo só calcula único "
+        "em período fechado). Contagem por página, não cohort fechada: os degraus "
+        "são aproximados, não subconjuntos exatos.",
         icon=":material/lightbulb:",
     )
 
