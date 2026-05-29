@@ -7,33 +7,25 @@ from __future__ import annotations
 
 import streamlit as st
 
-# Tokens DS-MS (Design System oficial do Estado de MS — valores exatos).
-PRIMARY = "#004F9F"        # primary-500: header, CTA, links, ativo
-PRIMARY_DARK = "#002F5F"   # primary-600: hover
-SOFT = "#CCDCEC"           # primary-100: superfície brand soft / tags
-BORDER = "#EAEBEC"         # borda de card
-MUTED = "#F9F9F9"          # fundo de seções alternadas
-INK = "#212A31"            # content-primary: texto principal
-SECONDARY = "#6E757A"      # content-secondary: meta/placeholder
+# Tokens — azul real do componente do portal ms.gov.br (#00519C)
+PRIMARY = "#00519C"
+PRIMARY_DARK = "#003B75"
+BORDER = "#E3E3E3"
 SUCCESS = "#168821"
 DANGER = "#E52207"
 WARNING = "#FFCD07"
-# Acentos para gráficos (dentro da paleta DS): nativo = primária, redirect = secundário.
-EXCLUSIVO = PRIMARY
-COMPARTILHADO = SECONDARY
+EXCLUSIVO = "#0E9F8E"
+COMPARTILHADO = "#9AA0A6"
+INK = "#1B1B1B"
 
 LOGO_URL = "https://noticias.ms.gov.br/uploads/midias/b61e2cfe41ee46169b616c9168911172.svg"
 
 _CSS = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-/* DS-MS: Roboto p/ corpo/UI, Open Sans p/ títulos. Base maior p/ legibilidade
-   (18px — degrau DS válido mais próximo de 20). */
-html {{ font-size: 18px; }}
-html, body, [class*="css"] {{ font-family: 'Roboto', sans-serif; }}
-h1, h2, h3, h4, h5, h6 {{ font-family: 'Open Sans', sans-serif; font-weight: 700; }}
+html, body, [class*="css"] {{ font-family: 'Open Sans', sans-serif; }}
 
 .bi-header {{
   background: {PRIMARY};
@@ -91,57 +83,18 @@ div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_cont
 .svc-link {{ color: {PRIMARY}; font-size: .8rem; text-decoration: none; font-weight: 600; }}
 .svc-link:hover {{ text-decoration: underline; }}
 
-/* Grade de categorias do app MS Digital — tiles estilo portal ms.gov.br.
-   st.button simples só é usado nessa grade — estilo global é seguro aqui.
-   Ícone em círculo soft + nome + barra azul na base do card. */
-div[data-testid="stButton"] button {{
-  min-height: 150px; height: 100%;
-  flex-direction: column; align-items: center; justify-content: center;
-  padding: 18px 12px 14px;
-  border: 1px solid {BORDER}; border-radius: 8px;
-  border-bottom: 3px solid {PRIMARY};
-  background: #fff; text-align: center; white-space: normal;
-  transition: box-shadow .15s, border-color .15s, transform .1s;
-}}
-div[data-testid="stButton"] button:hover {{
-  border-bottom-color: {PRIMARY_DARK};
-  box-shadow: 0 4px 8px rgba(0,32,64,.16);
-}}
-div[data-testid="stButton"] button:active {{ transform: translateY(1px); }}
-/* wrappers internos do botão → empilhar ícone acima do texto, centralizado */
-div[data-testid="stButton"] button > div {{ width: 100%; }}
-div[data-testid="stButton"] button span[data-has-shortcut] {{
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 14px; width: 100%;
-}}
-div[data-testid="stButton"] button p {{
-  text-align: center; line-height: 1.35; margin: 0;
-  color: {PRIMARY}; font-weight: 700; font-size: .9rem;
-}}
-/* Ícone Material vira círculo azul-claro (idealizacao.png) */
-div[data-testid="stButton"] button [data-testid="stIconMaterial"] {{
-  font-size: 30px !important; color: {PRIMARY};
-  background: {SOFT}; border-radius: 9999px;
-  width: 60px !important; height: 60px !important; min-width: 60px;
-  margin-bottom: 4px;
+/* Grade de categorias do app MS Digital (estilo home do app) */
+.cat-tile {{ text-align: center; padding: 6px 4px 0; }}
+.cat-circle {{
+  width: 76px; height: 76px; border-radius: 50%;
+  background: #E4F3EC; margin: 0 auto 8px;
   display: flex; align-items: center; justify-content: center;
 }}
-
-/* Linha de serviço compacta no modal (card DS-MS enxuto) */
-.svc-row {{
-  display: flex; align-items: center; gap: 12px;
-  border: 1px solid {BORDER}; border-radius: 8px;
-  background: #fff; padding: 10px 14px; margin-bottom: 8px;
-}}
-.svc-row .svc-ic {{ font-family: 'Material Icons'; font-size: 22px; color: {PRIMARY}; flex: 0 0 auto; }}
-.svc-row .svc-main {{ flex: 1; min-width: 0; }}
-.svc-row .svc-tipo {{ color: {SECONDARY}; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }}
-.svc-row .svc-nm {{ color: {INK}; font-weight: 700; font-size: .95rem; line-height: 1.2; }}
-.svc-row .svc-rt {{ display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }}
-.svc-row .svc-tag {{ background: {SOFT}; color: {PRIMARY_DARK}; font-weight: 700; font-size: .76rem; padding: 2px 10px; border-radius: 4px; white-space: nowrap; }}
-.svc-row .svc-mt {{ color: {SECONDARY}; font-size: .74rem; white-space: nowrap; }}
-.svc-row .svc-lk {{ color: {PRIMARY}; font-size: .78rem; font-weight: 600; text-decoration: none; white-space: nowrap; }}
-.svc-row .svc-lk:hover {{ text-decoration: underline; }}
+.cat-circle .material-icons,
+.cat-circle span {{ font-family: 'Material Icons'; font-size: 40px; color: {EXCLUSIVO}; line-height: 1; }}
+.cat-name {{ color: #41464B; font-weight: 700; font-size: .9rem; line-height: 1.15; }}
+.cat-pessoas {{ color: {PRIMARY}; font-weight: 800; font-size: 1.25rem; line-height: 1.1; margin-top: 4px; }}
+.cat-meta {{ color: #6B7280; font-size: .72rem; margin-top: 2px; }}
 </style>
 """
 

@@ -12,10 +12,12 @@ import pandas as pd
 import streamlit as st
 
 from src.obs import setup_logging
+from src.run_acessos import compute_portal
 from src.run_study import compute
-from src.ui import PROFILE_LABEL, acessos_view, cards, sections
+from src.ui import PROFILE_LABEL, app_view, cards, sections
 from src.ui import sidebar as sb
 from src.ui import theme
+from src.ui.sections import _br
 
 st.set_page_config(page_title="BI · Portal MS — SETDIG", layout="wide")
 
@@ -55,14 +57,42 @@ def _painel_filtro() -> None:
         sections.services_chart(df)
     st.divider()
     cards.service_cards(df)
+    st.divider()
+    _secao_workspace()
+
+
+@st.cache_data(ttl=3600, show_spinner="Consultando Matomo (workspace)...")
+def _load_portal(mes: str):
+    return compute_portal(mes)
+
+
+def _secao_workspace() -> None:
+    """Área logada do portal (gov.br): Meu Perfil → Meus Sistemas."""
+    st.markdown("### Área logada (gov.br) — pessoas no mês")
+    from datetime import date
+
+    mes = date.today().strftime("%Y-%m")
+    try:
+        rows = _load_portal(mes)
+    except Exception as exc:  # noqa: BLE001
+        st.warning(f"Workspace indisponível: {exc}")
+        return
+    by = {r["categoria"]: r for r in rows}
+    c1, c2 = st.columns(2)
+    perfil = by.get("Meu Perfil", {})
+    sistemas = by.get("Meus Sistemas", {})
+    c1.metric("Meu Perfil — pessoas", _br(perfil.get("pessoas", 0)),
+              help=f"{_br(perfil.get('acessos', 0))} visitas ({mes}).")
+    c2.metric("Meus Sistemas — pessoas", _br(sistemas.get("pessoas", 0)),
+              help=f"{_br(sistemas.get('acessos', 0))} visitas ({mes}).")
 
 
 def _painel_acessos() -> None:
     theme.header(
-        "Acessos por Categoria — MS Digital + MS GovBR",
-        "Governo de MS · SETDIG · GA4 (app) + Matomo (portal) · pessoas por categoria",
+        "MS Digital — Categorias e Serviços do App",
+        "Governo de MS · SETDIG · GA4 · pessoas por categoria · nativo × redirecionado",
     )
-    acessos_view.render()
+    app_view.render()
 
 
 _PAINEIS = {

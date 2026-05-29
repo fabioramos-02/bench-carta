@@ -23,6 +23,47 @@ def _norm(label: str) -> str:
     return s.strip().lower()
 
 
+def screens_metrics(client: GA4Client, start: str, end: str) -> dict[str, dict]:
+    """Métricas por tela do app (serviços nativos).
+
+    Retorna {norm(rótulo): {"pessoas": activeUsers, "acessos": screenPageViews}}.
+    """
+    rows = client.run_report(
+        [_SCREEN_DIM], ["activeUsers", "screenPageViews"], start, end
+    )
+    agg: dict[str, dict] = {}
+    for r in rows:
+        label = next((v for k, v in r.items() if k not in ("activeUsers", "screenPageViews")), "")
+        chave = _norm(label)
+        a = agg.setdefault(chave, {"pessoas": 0, "acessos": 0})
+        a["pessoas"] += int(r.get("activeUsers", 0) or 0)
+        a["acessos"] += int(r.get("screenPageViews", 0) or 0)
+    return agg
+
+
+def clicks_metrics(client: GA4Client, start: str, end: str) -> dict[str, dict]:
+    """Métricas por clique de redirecionamento (serviços redirect).
+
+    Evento `click` por `linkText`. Filtra eventName==click em Python (run_report
+    não suporta filtro de dimensão).
+    Retorna {norm(linkText): {"pessoas": totalUsers, "cliques": eventCount}}.
+    """
+    rows = client.run_report(
+        ["eventName", "linkText"], ["eventCount", "totalUsers"], start, end
+    )
+    agg: dict[str, dict] = {}
+    for r in rows:
+        if r.get("eventName") != "click":
+            continue
+        chave = _norm(r.get("linkText", ""))
+        if not chave or chave in ("(not set)", "unknown"):
+            continue
+        a = agg.setdefault(chave, {"pessoas": 0, "cliques": 0})
+        a["pessoas"] += int(r.get("totalUsers", 0) or 0)
+        a["cliques"] += int(r.get("eventCount", 0) or 0)
+    return agg
+
+
 def categoria_acessos(
     client: GA4Client, categorias_map: dict[str, str], start: str, end: str
 ) -> dict[str, dict]:

@@ -37,7 +37,7 @@ def _mes_alvo() -> str:
     return env or date.today().strftime("%Y-%m")
 
 
-def _datas_do_mes(mes: str) -> tuple[str, str, str]:
+def mes_para_datas(mes: str) -> tuple[str, str, str]:
     """(matomo_date, ga_start, ga_end) para o mês YYYY-MM.
 
     Matomo: period='month' + date=<primeiro dia> → único do mês.
@@ -50,10 +50,25 @@ def _datas_do_mes(mes: str) -> tuple[str, str, str]:
     return primeiro.isoformat(), primeiro.isoformat(), fim.isoformat()
 
 
+def compute_portal(mes: str | None = None) -> list[dict]:
+    """Só as páginas do Portal (Matomo): pessoas únicas no mês. Para o painel."""
+    mes = mes or _mes_alvo()
+    matomo_date, _, _ = mes_para_datas(mes)
+    from src.matomo.client import get_client
+    from src.matomo.queries import page_unique_visitors
+
+    matomo = get_client()
+    rows: list[dict] = []
+    for nome, url in WORKSPACE_PAGES.items():
+        pessoas, acessos = page_unique_visitors(matomo, url, period="month", date=matomo_date)
+        rows.append({"categoria": nome, "pessoas": pessoas, "acessos": acessos, "periodo": mes})
+    return rows
+
+
 def compute_acessos(mes: str | None = None) -> list[dict]:
     """Coleta linhas de acessos das duas fontes. Núcleo sem I/O de arquivo."""
     mes = mes or _mes_alvo()
-    matomo_date, ga_start, ga_end = _datas_do_mes(mes)
+    matomo_date, ga_start, ga_end = mes_para_datas(mes)
     rows: list[dict] = []
 
     # --- Portal (Matomo) — único só vem em period=month ----------------------
