@@ -8,6 +8,8 @@ Uso:
 """
 from __future__ import annotations
 
+from datetime import date
+
 import pandas as pd
 import streamlit as st
 
@@ -58,7 +60,7 @@ def _painel_filtro() -> None:
     st.divider()
     cards.service_cards(df)
     st.divider()
-    _secao_workspace()
+    _secao_workspace(window)
 
 
 @st.cache_data(ttl=3600, show_spinner="Consultando Matomo (workspace)...")
@@ -66,12 +68,15 @@ def _load_portal(mes: str):
     return compute_portal(mes)
 
 
-def _secao_workspace() -> None:
-    """Área logada do portal (gov.br): Meu Perfil → Meus Sistemas."""
-    st.markdown("### Área logada (gov.br) — pessoas no mês")
-    from datetime import date
+def _secao_workspace(window: dict) -> None:
+    """Área logada do portal (gov.br): Meu Perfil → Meus Sistemas.
 
-    mes = date.today().strftime("%Y-%m")
+    Acompanha o período selecionado: usa o mês da Data de referência (visitante
+    único só é calculável em período fechado no Matomo)."""
+    # window["date"] = "YYYY-MM-DD" ou "YYYY-MM-DD,YYYY-MM-DD" (range).
+    primeira = window.get("date", "").split(",")[0]
+    mes = primeira[:7] if len(primeira) >= 7 else date.today().strftime("%Y-%m")
+    st.markdown(f"### Área logada (gov.br) — pessoas no mês ({mes})")
     try:
         rows = _load_portal(mes)
     except Exception as exc:  # noqa: BLE001

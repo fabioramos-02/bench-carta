@@ -14,15 +14,8 @@ import re
 import time
 from functools import lru_cache
 
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import (
-    DateRange,
-    Dimension,
-    Metric,
-    RunReportRequest,
-)
-from google.oauth2.credentials import Credentials
-
+# Imports do SDK Google são LAZY (dentro dos métodos) para não exigir o pacote
+# `google-analytics-data` no boot do app — só ao consultar o GA4 de fato.
 from src.config import GA4Settings
 from src.obs import log_api_call, setup_logging
 
@@ -39,6 +32,9 @@ class GA4Client:
     """Wrapper fino sobre BetaAnalyticsDataClient (OAuth via refresh token)."""
 
     def __init__(self, settings: GA4Settings):
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.oauth2.credentials import Credentials
+
         self._property = f"properties/{settings.property_id}"
         credentials = Credentials(
             token=None,
@@ -58,6 +54,10 @@ class GA4Client:
         Em caso de dimensão inválida, troca pelo fallback e tenta de novo.
         Cada tentativa gera um registro estruturado (src.obs).
         """
+        from google.analytics.data_v1beta.types import (
+            DateRange, Dimension, Metric, RunReportRequest,
+        )
+
         start_t = time.perf_counter()
         try:
             request = RunReportRequest(

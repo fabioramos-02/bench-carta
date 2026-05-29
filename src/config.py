@@ -15,6 +15,22 @@ try:  # carga opcional de .env em ambiente local
 except ImportError:  # dependência opcional
     pass
 
+
+def _secret(key: str, default: str = "") -> str:
+    """Lê um segredo: st.secrets (Streamlit Cloud) → variável de ambiente (.env).
+
+    No Streamlit Cloud os segredos ficam em st.secrets (não em os.environ); local
+    usamos .env. Tenta os dois para funcionar nos dois ambientes.
+    """
+    try:
+        import streamlit as st
+
+        if key in st.secrets:
+            return str(st.secrets[key]).strip()
+    except Exception:  # sem runtime streamlit / sem secrets configurados
+        pass
+    return os.getenv(key, default).strip()
+
 # --- Portal / Matomo ---------------------------------------------------------
 PORTAL_BASE_URL = "https://www.ms.gov.br"
 PORTAL_HOME_URL = f"{PORTAL_BASE_URL}/"
@@ -65,19 +81,19 @@ class MatomoSettings:
 
 
 def load_settings() -> MatomoSettings:
-    """Monta as configurações a partir do ambiente. Falha cedo se faltar token."""
-    token = os.getenv("MATOMO_TOKEN", "").strip()
+    """Monta as configurações a partir do ambiente/secrets. Falha cedo sem token."""
+    token = _secret("MATOMO_TOKEN")
     if not token:
         raise RuntimeError(
-            "MATOMO_TOKEN ausente. Defina a variável de ambiente ou crie um .env "
+            "MATOMO_TOKEN ausente. Defina em st.secrets (Streamlit Cloud) ou no .env "
             "(veja .env.example)."
         )
     return MatomoSettings(
-        api_url=os.getenv("MATOMO_API_URL", MATOMO_API_URL),
-        id_site=int(os.getenv("MATOMO_ID_SITE", ID_SITE)),
+        api_url=_secret("MATOMO_API_URL") or MATOMO_API_URL,
+        id_site=int(_secret("MATOMO_ID_SITE") or ID_SITE),
         token=token,
-        period=os.getenv("MATOMO_PERIOD", DEFAULT_PERIOD),
-        date=os.getenv("MATOMO_DATE", DEFAULT_DATE),
+        period=_secret("MATOMO_PERIOD") or DEFAULT_PERIOD,
+        date=_secret("MATOMO_DATE") or DEFAULT_DATE,
     )
 
 
@@ -93,16 +109,16 @@ class GA4Settings:
 def load_ga4_settings() -> GA4Settings:
     """Configurações do GA4 a partir do ambiente. Falha cedo se faltar credencial."""
     required = {
-        "GOOGLE_PROPERTY_ID": os.getenv("GOOGLE_PROPERTY_ID", "").strip(),
-        "GOOGLE_CLIENT_ID": os.getenv("GOOGLE_CLIENT_ID", "").strip(),
-        "GOOGLE_CLIENT_SECRET": os.getenv("GOOGLE_CLIENT_SECRET", "").strip(),
-        "GOOGLE_REFRESH_TOKEN": os.getenv("GOOGLE_REFRESH_TOKEN", "").strip(),
+        "GOOGLE_PROPERTY_ID": _secret("GOOGLE_PROPERTY_ID"),
+        "GOOGLE_CLIENT_ID": _secret("GOOGLE_CLIENT_ID"),
+        "GOOGLE_CLIENT_SECRET": _secret("GOOGLE_CLIENT_SECRET"),
+        "GOOGLE_REFRESH_TOKEN": _secret("GOOGLE_REFRESH_TOKEN"),
     }
     faltando = [k for k, v in required.items() if not v]
     if faltando:
         raise RuntimeError(
             f"Credenciais GA4 ausentes: {', '.join(faltando)}. "
-            "Defina no .env (veja .env.example)."
+            "Defina em st.secrets (Streamlit Cloud) ou no .env (veja .env.example)."
         )
     return GA4Settings(
         property_id=required["GOOGLE_PROPERTY_ID"],

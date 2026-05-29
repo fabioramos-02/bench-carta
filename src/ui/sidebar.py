@@ -21,17 +21,17 @@ _PERIOD_MAP = {
 def period_selector() -> tuple[dict, str]:
     """Sidebar com calendário DD/MM/YYYY → ({period, date}, rótulo)."""
     st.sidebar.header("Período")
-    label = st.sidebar.radio("Agregação", list(_PERIOD_MAP), index=3)  # default: Ano
+    label = st.sidebar.radio("Agregação", list(_PERIOD_MAP), index=2)  # default: Mês
     period = _PERIOD_MAP[label]
     hoje = date.today()
 
     if period == "range":
         col1, col2 = st.sidebar.columns(2)
         inicio = col1.date_input(
-            "Início", value=date(2025, 1, 1), max_value=hoje, format="DD/MM/YYYY"
+            "Início", value=hoje.replace(day=1), max_value=hoje, format="DD/MM/YYYY"
         )
         fim = col2.date_input(
-            "Fim", value=date(2025, 12, 31), max_value=hoje, format="DD/MM/YYYY"
+            "Fim", value=hoje, max_value=hoje, format="DD/MM/YYYY"
         )
         if inicio > fim:
             st.sidebar.error("Data de início maior que a fim.")
@@ -40,7 +40,7 @@ def period_selector() -> tuple[dict, str]:
         return {"period": "range", "date": rng}, f"{inicio:%d/%m/%Y}–{fim:%d/%m/%Y}"
 
     ref = st.sidebar.date_input(
-        "Data de referência", value=date(2025, 12, 31), max_value=hoje, format="DD/MM/YYYY"
+        "Data de referência", value=hoje, max_value=hoje, format="DD/MM/YYYY"
     )
     window = {"period": period, "date": ref.strftime("%Y-%m-%d")}
     return window, _humanize(period, ref)
