@@ -19,7 +19,6 @@ from src.run_study import compute
 from src.ui import PROFILE_LABEL, app_view, cards, sections
 from src.ui import sidebar as sb
 from src.ui import theme
-from src.ui.sections import _br
 
 st.set_page_config(page_title="BI · Portal MS — SETDIG", layout="wide")
 
@@ -69,27 +68,31 @@ def _load_portal(mes: str):
 
 
 def _secao_workspace(window: dict) -> None:
-    """Área logada do portal (gov.br): Meu Perfil → Meus Sistemas.
+    """Área logada do portal (gov.br): Entrar → Meu Perfil → Meus Sistemas.
 
-    Acompanha o período selecionado: usa o mês da Data de referência (visitante
-    único só é calculável em período fechado no Matomo)."""
+    Acompanha o período do filtro lateral; o mês de referência vai no tooltip
+    (visitante único só é calculável em período fechado no Matomo)."""
     # window["date"] = "YYYY-MM-DD" ou "YYYY-MM-DD,YYYY-MM-DD" (range).
     primeira = window.get("date", "").split(",")[0]
     mes = primeira[:7] if len(primeira) >= 7 else date.today().strftime("%Y-%m")
-    st.markdown(f"### Área logada (gov.br) — pessoas no mês ({mes})")
+    st.markdown("### Área logada ms.gov.br")
+    st.caption(
+        "Fluxo do cidadão na área autenticada: clica em **Entrar** e loga com a "
+        "conta **gov.br** (Meu Perfil); depois pode abrir **Meus Sistemas**."
+    )
     try:
         rows = _load_portal(mes)
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Workspace indisponível: {exc}")
         return
-    by = {r["categoria"]: r for r in rows}
-    c1, c2 = st.columns(2)
-    perfil = by.get("Meu Perfil", {})
-    sistemas = by.get("Meus Sistemas", {})
-    c1.metric("Meu Perfil — pessoas", _br(perfil.get("pessoas", 0)),
-              help=f"{_br(perfil.get('acessos', 0))} visitas ({mes}).")
-    c2.metric("Meus Sistemas — pessoas", _br(sistemas.get("pessoas", 0)),
-              help=f"{_br(sistemas.get('acessos', 0))} visitas ({mes}).")
+    cards.workspace_cards(rows, mes)
+    st.info(
+        "**Como ler:** *Meu Perfil* conta quem autenticou na área logada; "
+        "*Meus Sistemas* conta quem chegou à lista de sistemas. Como *Meus Sistemas* "
+        "tem mais pessoas que *Meu Perfil*, parte do público entra direto nessa página "
+        "(favoritos/links salvos), sem passar pela home da área logada.",
+        icon=":material/lightbulb:",
+    )
 
 
 def _painel_acessos() -> None:

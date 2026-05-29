@@ -127,6 +127,15 @@ div[data-testid="stButton"] button [data-testid="stIconMaterial"] {{
   display: flex; align-items: center; justify-content: center;
 }}
 
+/* Card da área logada (gov.br): imagem + pessoas + descrição */
+.ws-card {{ border:0.8px solid {BORDER}; border-radius:8px; background:#fff;
+  padding:18px 20px; margin-bottom:16px; min-height:230px; }}
+.ws-img {{ max-height:88px; max-width:100%; border-radius:6px; margin-bottom:14px; display:block; }}
+.ws-num {{ color:{PRIMARY}; font-family:'Open Sans',sans-serif; font-weight:700;
+  font-size:2.2rem; line-height:1; }}
+.ws-label {{ color:{INK}; font-weight:700; font-size:.95rem; margin:4px 0 8px; }}
+.ws-desc {{ color:{SECONDARY}; font-size:.85rem; line-height:1.4; }}
+
 /* Linha de serviço compacta no modal (card DS-MS enxuto) */
 .svc-row {{
   display: flex; align-items: center; gap: 12px;

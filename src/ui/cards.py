@@ -5,11 +5,18 @@ categoria e o ícone Material a partir do prefixo da URL do serviço.
 """
 from __future__ import annotations
 
+import base64
+from functools import lru_cache
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 from src.config import PORTAL_BASE_URL
 from src.ui import PROFILE_LABEL
+from src.ui.sections import _br  # sem ciclo: sections não importa cards
+
+_ANEXOS = Path(__file__).resolve().parents[2] / "anexos"  # ui -> src -> raiz
 
 # prefixo do path -> (categoria legível, ícone Material Icons filled)
 _CATEGORY = {
@@ -58,6 +65,51 @@ def service_cards(df: pd.DataFrame) -> None:
     for i, (_, row) in enumerate(subset.iterrows()):
         with cols[i % 2]:
             _card(row)
+
+
+# --- Área logada (gov.br): Entrar → Meu Perfil → Meus Sistemas ---------------
+@lru_cache(maxsize=8)
+def _img_data_uri(name: str) -> str:
+    """PNG do anexo embutido como data URI (cacheado p/ não recodificar a cada rerun)."""
+    b64 = base64.b64encode((_ANEXOS / name).read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{b64}"
+
+
+_WORKSPACE_META = {
+    "Meu Perfil": {
+        "img": "meu perfil.png",
+        "desc": "Pessoas que clicaram em <b>Entrar</b> e fizeram login com a conta gov.br.",
+    },
+    "Meus Sistemas": {
+        "img": "meu sistemas.png",
+        "desc": "Pessoas que, já logadas, abriram <b>Meus Sistemas</b> para acessar os sistemas que possuem.",
+    },
+}
+
+
+def workspace_cards(rows: list[dict], mes: str) -> None:
+    """Dois cards (imagem + pessoas + descrição) da área logada do portal."""
+    by = {r["categoria"]: r for r in rows}
+    c1, c2 = st.columns(2)
+    for col, nome in zip((c1, c2), ("Meu Perfil", "Meus Sistemas")):
+        with col:
+            _workspace_card(nome, by.get(nome, {}), mes)
+
+
+def _workspace_card(nome: str, row: dict, mes: str) -> None:
+    meta = _WORKSPACE_META[nome]
+    acessos = _br(row.get("acessos", 0))
+    st.markdown(
+        f"""
+        <div class="ws-card" title="{acessos} visitas em {mes}">
+          <img class="ws-img" src="{_img_data_uri(meta['img'])}" alt="{nome}"/>
+          <div class="ws-num">{_br(row.get('pessoas', 0))}</div>
+          <div class="ws-label">{nome} — pessoas</div>
+          <div class="ws-desc">{meta['desc']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _card(row: pd.Series) -> None:
