@@ -39,6 +39,26 @@ def service_visits(index: dict[str, int], path: str) -> int:
     return index.get(_normalize(path), 0)
 
 
+def page_unique_visitors(client: MatomoClient, page_url: str, **window: Any) -> tuple[int, int]:
+    """Pessoas únicas e visitas de uma página específica do portal.
+
+    Visitante único por página não vem no relatório plano de getPageUrls; usa-se
+    `VisitsSummary.get` com `segment=pageUrl==<url>`, que devolve nb_uniq_visitors
+    das visitas que passaram por aquela URL.
+
+    Retorna: (nb_uniq_visitors, nb_visits). Em período fechado (range/month) o
+    summary vem como dict de métricas; aqui só lidamos com esse caso.
+    """
+    data = client.call(
+        "VisitsSummary.get",
+        segment=f"pageUrl=={page_url}",
+        **window,
+    )
+    if not isinstance(data, dict):
+        return 0, 0
+    return int(data.get("nb_uniq_visitors") or 0), int(data.get("nb_visits") or 0)
+
+
 def transitions_from_home(client: MatomoClient, path: str, **window: Any) -> int:
     """Enriquecimento opcional: visitas chegando ao serviço vindas da home.
 

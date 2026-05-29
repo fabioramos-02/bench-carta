@@ -13,15 +13,15 @@ Uso:
 from __future__ import annotations
 
 import csv
-import logging
 from pathlib import Path
 
 from src.analysis.metrics import build_result
 from src.matomo.client import get_client
 from src.matomo.queries import fetch_page_index, home_visits, service_visits
+from src.obs import setup_logging
 from src.profiles import HIGHLIGHTED_SERVICES, shared_services, unique_services
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+setup_logging()
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 

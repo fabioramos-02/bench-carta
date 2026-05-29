@@ -21,6 +21,26 @@ PORTAL_HOME_URL = f"{PORTAL_BASE_URL}/"
 MATOMO_API_URL = "https://webanalytics.ms.gov.br/index.php"
 ID_SITE = 298
 
+# --- Acessos por categoria (demanda BI) --------------------------------------
+# Páginas do portal (Matomo) cujas pessoas únicas queremos contar. O fluxo é
+# SSO gov.br -> /workspace (meu perfil) -> /workspace/minha-area/meus-sistemas.
+WORKSPACE_PAGES = {
+    "Meu Perfil": f"{PORTAL_BASE_URL}/workspace",
+    "Meus Sistemas": f"{PORTAL_BASE_URL}/workspace/minha-area/meus-sistemas",
+}
+
+# Categorias do app MS Digital (GA4) -> rótulo exato da tela (unifiedScreenName).
+# "Servidor Público" é a categoria de entrada; "Contracheque" é o holerite.
+MS_DIGITAL_CATEGORIAS = {
+    "servidor": "Servidor Público",
+    "holerite": "Contracheque",
+}
+
+# Mês alvo da consulta de acessos (YYYY-MM). Vazio => mês corrente.
+# Granularidade mensal é obrigatória: o Matomo só calcula visitantes únicos em
+# períodos fechados (month/year); em 'range' devolve 0.
+ACESSOS_MONTH = ""
+
 # --- Janela de análise padrão ------------------------------------------------
 DEFAULT_PERIOD = "year"
 DEFAULT_DATE = "2025-01-01"  # base do estudo: ano de 2025 completo
@@ -58,4 +78,35 @@ def load_settings() -> MatomoSettings:
         token=token,
         period=os.getenv("MATOMO_PERIOD", DEFAULT_PERIOD),
         date=os.getenv("MATOMO_DATE", DEFAULT_DATE),
+    )
+
+
+# --- Google Analytics 4 (app MS Digital) -------------------------------------
+@dataclass(frozen=True)
+class GA4Settings:
+    property_id: str
+    client_id: str
+    client_secret: str
+    refresh_token: str
+
+
+def load_ga4_settings() -> GA4Settings:
+    """Configurações do GA4 a partir do ambiente. Falha cedo se faltar credencial."""
+    required = {
+        "GOOGLE_PROPERTY_ID": os.getenv("GOOGLE_PROPERTY_ID", "").strip(),
+        "GOOGLE_CLIENT_ID": os.getenv("GOOGLE_CLIENT_ID", "").strip(),
+        "GOOGLE_CLIENT_SECRET": os.getenv("GOOGLE_CLIENT_SECRET", "").strip(),
+        "GOOGLE_REFRESH_TOKEN": os.getenv("GOOGLE_REFRESH_TOKEN", "").strip(),
+    }
+    faltando = [k for k, v in required.items() if not v]
+    if faltando:
+        raise RuntimeError(
+            f"Credenciais GA4 ausentes: {', '.join(faltando)}. "
+            "Defina no .env (veja .env.example)."
+        )
+    return GA4Settings(
+        property_id=required["GOOGLE_PROPERTY_ID"],
+        client_id=required["GOOGLE_CLIENT_ID"],
+        client_secret=required["GOOGLE_CLIENT_SECRET"],
+        refresh_token=required["GOOGLE_REFRESH_TOKEN"],
     )
