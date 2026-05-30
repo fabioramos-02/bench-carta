@@ -167,18 +167,25 @@ def _close_modal() -> None:
 # largura ~720px controlada por CSS (theme.py); on_dismiss limpa o estado no X.
 @st.dialog("Serviços da categoria", on_dismiss=_close_modal)
 def _modal(cat: dict, tipo: str | None = None) -> None:
-    fonte_nota = {
-        "uniao": " · pessoas únicas que usaram algum serviço da categoria",
-        "tela": " · medido na tela da categoria no app",
-        "clique": " · categoria redireciona direto (nº de cliques)",
-        "servico": " · estimado pelo serviço de maior acesso",
-    }.get(cat.get("pessoas_fonte", ""), "")
     st.markdown(f"### {cat['categoria']}")
-    st.caption(
-        f"{_br(cat['pessoas'])} pessoas únicas no período · "
-        f"{cat['n_nativo']} nativos / {cat['n_redirect']} redirecionados{fonte_nota}"
-    )
-    _legenda_pessoas_acessos()
+    if cat.get("pessoas_fonte") == "uniao":
+        st.caption(
+            f"**{_br(cat['pessoas'])} pessoas diferentes** usaram a categoria no período "
+            f"(não é a soma dos serviços abaixo) · "
+            f"{cat['n_nativo']} nativos / {cat['n_redirect']} redirecionados"
+        )
+        _explica_uniao(cat)
+    else:
+        fonte_nota = {
+            "tela": " · medido na tela da categoria no app",
+            "clique": " · categoria redireciona direto (nº de cliques)",
+            "servico": " · estimado pelo serviço de maior acesso",
+        }.get(cat.get("pessoas_fonte", ""), "")
+        st.caption(
+            f"{_br(cat['pessoas'])} pessoas no período · "
+            f"{cat['n_nativo']} nativos / {cat['n_redirect']} redirecionados{fonte_nota}"
+        )
+        _legenda_pessoas_acessos()
     servicos = [s for s in cat["servicos"] if tipo is None or s["tipo"] == tipo]
     if not servicos:
         st.info("Nenhum serviço para o filtro selecionado.")
@@ -188,6 +195,38 @@ def _modal(cat: dict, tipo: str | None = None) -> None:
     if st.button("Fechar", key="modal_fechar", width="stretch"):
         st.session_state.pop("modal_cat", None)
         st.rerun()
+
+
+def _explica_uniao(cat: dict) -> None:
+    """Popover leigo: por que o total ≠ soma, com exemplo de 3 usuários e a
+    média de serviços por pessoa da própria categoria."""
+    soma = sum(s["pessoas"] for s in cat["servicos"])
+    total = cat["pessoas"] or 1
+    media = soma / total
+    with st.popover("ℹ️ Por que o total não é a soma dos serviços?", width="stretch"):
+        st.markdown(
+            "Cada número é de **pessoas diferentes**. Quem usa vários serviços "
+            "conta **1× na categoria**, mas aparece em **cada** serviço que usou — "
+            "então somar os serviços conta a mesma pessoa mais de uma vez."
+        )
+        st.markdown("**Exemplo — 3 cidadãos:**")
+        st.markdown(
+            "| Serviço | Pessoas |\n|---|---|\n"
+            "| Cartão SUS | 2 (Ana, Bruno) |\n"
+            "| Vacinação | 2 (Ana, Carla) |\n"
+            "| Doador | 1 (Carla) |\n"
+            "| **Soma dos serviços** | **5** |\n"
+            "| **Pessoas na categoria** | **3** |"
+        )
+        st.caption(
+            "Deu 5 na soma e 3 no total — Ana e Carla usaram 2 serviços cada. "
+            "São 3 pessoas, não 5."
+        )
+        media_br = f"{media:.1f}".replace(".", ",")
+        st.markdown(
+            f"Nesta categoria: **{_br(cat['pessoas'])} pessoas** usaram, em média, "
+            f"**{media_br} serviços** cada (soma {_br(soma)} ÷ {_br(cat['pessoas'])})."
+        )
 
 
 def _legenda_pessoas_acessos() -> None:
