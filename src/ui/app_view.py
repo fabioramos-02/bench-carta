@@ -185,7 +185,7 @@ def _modal(cat: dict, tipo: str | None = None) -> None:
     else:
         for s in servicos:
             _servico_card(s)
-    if st.button("Fechar", key="modal_fechar", width="stretch"):
+    if st.button("Fechar", key="modal_fechar"):
         st.session_state.pop("modal_cat", None)
         st.rerun()
 
