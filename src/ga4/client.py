@@ -118,6 +118,72 @@ class GA4Client:
         )
         return rows
 
+    def run_reports_batch(
+        self, specs: list[dict], start: str, end: str
+    ) -> list[list[dict]]:
+        """Roda vários relatórios em lotes de 5 (GA4 batchRunReports) e devolve
+        a lista de linhas por spec, na MESMA ordem de `specs`.
+
+        Cada spec: {"metrics": [...], "dimensions": [...]?, "dimension_filter": expr?}.
+        Troca N round-trips por N/5 — derruba a latência dominante (I/O de rede).
+        Se um lote falhar, faz fallback sequencial por spec (com fallback de dimensão).
+        """
+        from google.analytics.data_v1beta.types import (
+            BatchRunReportsRequest, DateRange, Dimension, Metric, RunReportRequest,
+        )
+
+        resultados: list[list[dict]] = [[] for _ in specs]
+        for ini in range(0, len(specs), 5):
+            lote = specs[ini:ini + 5]
+            reqs = [
+                RunReportRequest(
+                    dimensions=[Dimension(name=d) for d in s.get("dimensions", [])],
+                    metrics=[Metric(name=m) for m in s["metrics"]],
+                    date_ranges=[DateRange(start_date=start, end_date=end)],
+                    dimension_filter=s.get("dimension_filter"),
+                    limit=500,
+                )
+                for s in lote
+            ]
+            start_t = time.perf_counter()
+            try:
+                resp = self._client.batch_run_reports(
+                    BatchRunReportsRequest(property=self._property, requests=reqs)
+                )
+                for i, rep in enumerate(resp.reports):
+                    resultados[ini + i] = self._rows_from(rep, lote[i])
+                log_api_call(
+                    source="ga4", method="batchRunReports", ok=True,
+                    duration_ms=(time.perf_counter() - start_t) * 1000.0,
+                    n_reports=len(reqs), date_range=f"{start}..{end}",
+                )
+            except Exception as exc:  # noqa: BLE001 — fallback sequencial do lote
+                log_api_call(
+                    source="ga4", method="batchRunReports", ok=False,
+                    duration_ms=(time.perf_counter() - start_t) * 1000.0,
+                    n_reports=len(reqs), error=f"{type(exc).__name__}: {exc}",
+                )
+                for i, s in enumerate(lote):
+                    resultados[ini + i] = self.run_report(
+                        s.get("dimensions", []), s["metrics"], start, end,
+                        s.get("dimension_filter"),
+                    )
+        return resultados
+
+    @staticmethod
+    def _rows_from(report, spec: dict) -> list[dict]:
+        dims = spec.get("dimensions", [])
+        mets = spec["metrics"]
+        out: list[dict] = []
+        for row in report.rows:
+            entry: dict = {}
+            for i, d in enumerate(dims):
+                entry[d] = row.dimension_values[i].value
+            for i, m in enumerate(mets):
+                entry[m] = row.metric_values[i].value
+            out.append(entry)
+        return out
+
     @staticmethod
     def _swap_filter_field(expr, campo: str | None, novo: str | None):
         """Troca recursivamente `field_name == campo` por `novo` num

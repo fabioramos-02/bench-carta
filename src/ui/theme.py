@@ -155,29 +155,24 @@ div[data-testid="stButton"] button [data-testid="stIconMaterial"] {{
 /* Modal (st.dialog) — largura média (~720px). width="large" do Streamlit fica
    largo demais; estreitamos sem ocupar a tela toda. */
 div[data-testid="stDialog"] div[role="dialog"] {{
-  width: 720px !important;
-  max-width: 92vw !important;
+  width: 560px !important;
+  max-width: 94vw !important;
 }}
 
-/* Botão "Fechar" do modal — ghost secundário, pequeno, à direita. Sobrescreve
-   o estilo de tile global (stButton 150px) que senão o deixaria gigante. */
-.st-key-modal_fechar {{ display: flex; justify-content: flex-end; margin-top: 6px; }}
+/* Botão "Fechar" do modal — primário azul DS-MS, largura total, altura normal.
+   Sobrescreve o estilo de tile global (stButton 150px) que o deixaria gigante. */
+.st-key-modal_fechar {{ margin-top: 6px; }}
 .st-key-modal_fechar button {{
   min-height: 0 !important; height: auto !important;
-  flex-direction: row !important; width: auto !important;
-  padding: 6px 20px !important; border: 1px solid {BORDER} !important;
-  border-bottom: 1px solid {BORDER} !important; border-radius: 6px !important;
-  background: #fff !important; box-shadow: none !important;
+  flex-direction: row !important; width: 100% !important;
+  padding: 11px 0 !important; border: none !important; border-radius: 6px !important;
+  background: {PRIMARY} !important; box-shadow: none !important;
 }}
 .st-key-modal_fechar button p {{
-  color: {PRIMARY} !important; font-weight: 600 !important;
-  font-size: .85rem !important; text-transform: none !important;
+  color: #fff !important; font-weight: 700 !important;
+  font-size: .92rem !important; text-transform: none !important;
 }}
-.st-key-modal_fechar button:hover {{
-  background: {PRIMARY} !important; border-color: {PRIMARY} !important;
-  box-shadow: none !important;
-}}
-.st-key-modal_fechar button:hover p {{ color: #fff !important; }}
+.st-key-modal_fechar button:hover {{ background: {PRIMARY_DARK} !important; }}
 
 /* Legenda pessoas × acessos (rodapé do modal/seções) */
 .metric-legend {{

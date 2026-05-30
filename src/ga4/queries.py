@@ -64,24 +64,17 @@ def clicks_metrics(client: GA4Client, start: str, end: str) -> dict[str, dict]:
     return agg
 
 
-def category_unique_users(
-    client: GA4Client,
-    native_labels: list[str],
-    redirect_labels: list[str],
-    start: str,
-    end: str,
-) -> int:
-    """União de usuários ÚNICOS que tocaram QUALQUER serviço da categoria.
+def build_category_filter(native_labels: list[str], redirect_labels: list[str]):
+    """FilterExpression OR p/ a união de únicos da categoria (ou None se vazio).
 
-    Filtro OR: (unifiedScreenName inList nativos) OU (eventName==click AND
-    linkText inList redirects). `activeUsers` é user-scoped → a mesma pessoa em
-    2 serviços conta 1× na união (fica entre o maior serviço e a soma).
-    Retorna 0 se sem rótulos ou sem dados."""
+    OR: (unifiedScreenName inList nativos) OU (eventName==click AND linkText
+    inList redirects). Usado em lote (batchRunReports) com a métrica activeUsers.
+    """
     from google.analytics.data_v1beta.types import (
         Filter, FilterExpression, FilterExpressionList,
     )
 
-    ramos: list[FilterExpression] = []
+    ramos: list = []
     if native_labels:
         ramos.append(FilterExpression(filter=Filter(
             field_name=_SCREEN_DIM,
@@ -99,11 +92,27 @@ def category_unique_users(
             )),
         ])))
     if not ramos:
-        return 0
-    expr = ramos[0] if len(ramos) == 1 else FilterExpression(
+        return None
+    return ramos[0] if len(ramos) == 1 else FilterExpression(
         or_group=FilterExpressionList(expressions=ramos)
     )
 
+
+def category_unique_users(
+    client: GA4Client,
+    native_labels: list[str],
+    redirect_labels: list[str],
+    start: str,
+    end: str,
+) -> int:
+    """União de usuários ÚNICOS que tocaram QUALQUER serviço da categoria.
+
+    `activeUsers` é user-scoped → mesma pessoa em 2 serviços conta 1× (fica entre
+    o maior serviço e a soma). Retorna 0 se sem rótulos/dados. Uso pontual; o
+    `compute_app` agora usa `build_category_filter` + `run_reports_batch`."""
+    expr = build_category_filter(native_labels, redirect_labels)
+    if expr is None:
+        return 0
     rows = client.run_report([], ["activeUsers"], start, end, dimension_filter=expr)
     return sum(int(r.get("activeUsers", 0) or 0) for r in rows)
 
