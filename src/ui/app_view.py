@@ -106,7 +106,8 @@ def render() -> None:
 
     # --- Grade de categorias (estilo app) — clique no tile abre o modal ------
     st.markdown("### Categorias do app")
-    st.caption("Número = pessoas que acessaram a categoria no mês. Clique no ícone para aprofundar.")
+    st.caption("Número = pessoas únicas que usaram a categoria (qualquer serviço) no período. "
+               "Clique no ícone para aprofundar.")
     cols = st.columns(_COLS)
     for i, c in enumerate(categorias):
         total_svc = c["n_nativo"] + c["n_redirect"]
@@ -115,14 +116,23 @@ def render() -> None:
         with cols[i % _COLS]:
             if st.button(label, icon=f":material/{c['icon']}:",
                          key=f"cat_{c['categoria']}", width="stretch"):
-                _modal(c, tipo)
+                st.session_state["modal_cat"] = c["categoria"]
+
+    # Modal recomputado do run atual → acompanha o filtro (período/tipo) ao vivo.
+    sel = st.session_state.get("modal_cat")
+    if sel:
+        cat_now = next((c for c in categorias if c["categoria"] == sel), None)
+        if cat_now is not None:
+            _modal(cat_now, tipo)
+        else:
+            st.session_state.pop("modal_cat", None)
 
     st.divider()
     _graficos(categorias, tot)
     st.caption(
-        "**Pessoas** = usuários únicos (GA4 activeUsers p/ telas; totalUsers p/ cliques). "
-        "Categorias que redirecionam direto (MS.gov, Diário Oficial, Nota MS Premiada) "
-        "usam o nº do clique. Serviços sem dado no GA4 aparecem com 0 (rótulo a refinar)."
+        "**Pessoas** = usuários únicos no período (GA4 activeUsers). O total da categoria é a "
+        "**união** desses únicos sobre todos os serviços — fica entre o maior serviço e a soma "
+        "(não é a soma, pois a mesma pessoa não conta duas vezes). Serviços sem dado aparecem com 0."
     )
 
 
@@ -149,23 +159,51 @@ def _storytelling(categorias: list[dict], tot: dict, periodo: str) -> None:
     )
 
 
-@st.dialog("Serviços da categoria", width="large")
+def _close_modal() -> None:
+    """Limpa a seleção ao fechar (X / clique fora) — evita o modal reabrir sozinho."""
+    st.session_state.pop("modal_cat", None)
+
+
+# largura ~720px controlada por CSS (theme.py); on_dismiss limpa o estado no X.
+@st.dialog("Serviços da categoria", on_dismiss=_close_modal)
 def _modal(cat: dict, tipo: str | None = None) -> None:
     fonte_nota = {
+        "uniao": " · pessoas únicas que usaram algum serviço da categoria",
+        "tela": " · medido na tela da categoria no app",
         "clique": " · categoria redireciona direto (nº de cliques)",
         "servico": " · estimado pelo serviço de maior acesso",
     }.get(cat.get("pessoas_fonte", ""), "")
     st.markdown(f"### {cat['categoria']}")
     st.caption(
-        f"{_br(cat['pessoas'])} pessoas no mês · "
+        f"{_br(cat['pessoas'])} pessoas únicas no período · "
         f"{cat['n_nativo']} nativos / {cat['n_redirect']} redirecionados{fonte_nota}"
     )
+    _legenda_pessoas_acessos()
     servicos = [s for s in cat["servicos"] if tipo is None or s["tipo"] == tipo]
     if not servicos:
         st.info("Nenhum serviço para o filtro selecionado.")
-        return
-    for s in servicos:
-        _servico_card(s)
+    else:
+        for s in servicos:
+            _servico_card(s)
+    if st.button("Fechar", key="modal_fechar", width="stretch"):
+        st.session_state.pop("modal_cat", None)
+        st.rerun()
+
+
+def _legenda_pessoas_acessos() -> None:
+    """Explica pessoas × acessos para a gestão (some a ambiguidade dos números)."""
+    st.markdown(
+        '<div class="metric-legend">'
+        '<div class="ml-item"><span class="ml-k">Pessoas</span> = usuários '
+        '<b>únicos</b> no período (cada cidadão conta 1×, mesmo abrindo várias vezes).</div>'
+        '<div class="ml-item"><span class="ml-k">Acessos / Cliques</span> = total de '
+        'aberturas (uma pessoa pode contar <b>várias</b> vezes).</div>'
+        '<div class="ml-item">O total da categoria é a <b>união</b> dos únicos: fica '
+        '<b>entre</b> o maior serviço e a soma — quem usa 2 serviços conta nos 2, mas '
+        '1× na categoria.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _servico_card(s: dict) -> None:

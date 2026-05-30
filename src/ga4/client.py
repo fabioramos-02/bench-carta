@@ -47,9 +47,15 @@ class GA4Client:
         self._client = BetaAnalyticsDataClient(credentials=credentials)
 
     def run_report(
-        self, dimensions: list[str], metrics: list[str], start: str, end: str
+        self, dimensions: list[str], metrics: list[str], start: str, end: str,
+        dimension_filter=None,
     ) -> list[dict]:
         """Roda um relatório e devolve linhas como dicts {dim/met: valor}.
+
+        `dimensions` pode ser vazio (consulta só de métrica — ex.: união de
+        únicos sob filtro). `dimension_filter` é um FilterExpression opcional do
+        SDK; em fallback de dimensão, o field_name dentro do filtro também é
+        trocado (ver `_swap_filter_field`).
 
         Em caso de dimensão inválida, troca pelo fallback e tenta de novo.
         Cada tentativa gera um registro estruturado (src.obs).
@@ -65,19 +71,28 @@ class GA4Client:
                 dimensions=[Dimension(name=d) for d in dimensions],
                 metrics=[Metric(name=m) for m in metrics],
                 date_ranges=[DateRange(start_date=start, end_date=end)],
+                dimension_filter=dimension_filter,
                 limit=500,
             )
             response = self._client.run_report(request)
         except Exception as exc:  # noqa: BLE001 — fallback dinâmico de dimensão
-            novo = self._with_fallback(dimensions, str(exc))
-            if novo is not None:
-                log_api_call(
-                    source="ga4", method="runReport", ok=False,
-                    duration_ms=(time.perf_counter() - start_t) * 1000.0,
-                    event="dim_fallback", dimensions=dimensions, fallback=novo,
-                    error=f"{type(exc).__name__}: {exc}",
-                )
-                return self.run_report(novo, metrics, start, end)
+            # Detecta "Field X is not a valid dimension" — X pode estar nas
+            # dimensions OU dentro do dimension_filter (caso da união de únicos).
+            match = re.search(r"Field (\w+) is not a valid dimension", str(exc))
+            campo = match.group(1) if match else None
+            if campo and campo in _DIM_FALLBACK:
+                novo_campo = _DIM_FALLBACK[campo]
+                novas_dims = [novo_campo if d == campo else d for d in dimensions]
+                novo_filtro = self._swap_filter_field(dimension_filter, campo, novo_campo)
+                mudou = novas_dims != dimensions or novo_filtro is not dimension_filter
+                if mudou:
+                    log_api_call(
+                        source="ga4", method="runReport", ok=False,
+                        duration_ms=(time.perf_counter() - start_t) * 1000.0,
+                        event="dim_fallback", dimensions=dimensions, fallback=novas_dims,
+                        error=f"{type(exc).__name__}: {exc}",
+                    )
+                    return self.run_report(novas_dims, metrics, start, end, novo_filtro)
             log_api_call(
                 source="ga4", method="runReport", ok=False,
                 duration_ms=(time.perf_counter() - start_t) * 1000.0,
@@ -104,16 +119,35 @@ class GA4Client:
         return rows
 
     @staticmethod
-    def _with_fallback(dimensions: list[str], err: str) -> list[str] | None:
-        match = re.search(r"Field (\w+) is not a valid dimension", err)
-        if not match:
-            return None
-        field = match.group(1)
-        if field not in dimensions or field not in _DIM_FALLBACK:
-            return None
-        nova = list(dimensions)
-        nova[nova.index(field)] = _DIM_FALLBACK[field]
-        return nova
+    def _swap_filter_field(expr, campo: str | None, novo: str | None):
+        """Troca recursivamente `field_name == campo` por `novo` num
+        FilterExpression. Devolve o MESMO objeto se nada mudar (identidade usada
+        para detectar alteração). Sem `campo`/`expr` → retorna `expr` intacto."""
+        if expr is None or not campo:
+            return expr
+        which = expr.WhichOneof("expr") if hasattr(expr, "WhichOneof") else None
+        if which == "filter" and expr.filter.field_name == campo:
+            from google.analytics.data_v1beta.types import Filter, FilterExpression
+            novo_filter = Filter()
+            novo_filter._pb.CopyFrom(expr.filter._pb)
+            novo_filter.field_name = novo
+            return FilterExpression(filter=novo_filter)
+        if which in ("and_group", "or_group"):
+            grupo = getattr(expr, which)
+            trocou = False
+            novas = []
+            for sub in grupo.expressions:
+                ns = GA4Client._swap_filter_field(sub, campo, novo)
+                trocou = trocou or ns is not sub
+                novas.append(ns)
+            if not trocou:
+                return expr
+            from google.analytics.data_v1beta.types import (
+                FilterExpression, FilterExpressionList,
+            )
+            lista = FilterExpressionList(expressions=novas)
+            return FilterExpression(**{which: lista})
+        return expr
 
 
 @lru_cache(maxsize=1)

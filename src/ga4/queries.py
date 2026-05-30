@@ -64,6 +64,50 @@ def clicks_metrics(client: GA4Client, start: str, end: str) -> dict[str, dict]:
     return agg
 
 
+def category_unique_users(
+    client: GA4Client,
+    native_labels: list[str],
+    redirect_labels: list[str],
+    start: str,
+    end: str,
+) -> int:
+    """União de usuários ÚNICOS que tocaram QUALQUER serviço da categoria.
+
+    Filtro OR: (unifiedScreenName inList nativos) OU (eventName==click AND
+    linkText inList redirects). `activeUsers` é user-scoped → a mesma pessoa em
+    2 serviços conta 1× na união (fica entre o maior serviço e a soma).
+    Retorna 0 se sem rótulos ou sem dados."""
+    from google.analytics.data_v1beta.types import (
+        Filter, FilterExpression, FilterExpressionList,
+    )
+
+    ramos: list[FilterExpression] = []
+    if native_labels:
+        ramos.append(FilterExpression(filter=Filter(
+            field_name=_SCREEN_DIM,
+            in_list_filter=Filter.InListFilter(values=native_labels, case_sensitive=False),
+        )))
+    if redirect_labels:
+        ramos.append(FilterExpression(and_group=FilterExpressionList(expressions=[
+            FilterExpression(filter=Filter(
+                field_name="eventName",
+                string_filter=Filter.StringFilter(value="click"),
+            )),
+            FilterExpression(filter=Filter(
+                field_name="linkText",
+                in_list_filter=Filter.InListFilter(values=redirect_labels, case_sensitive=False),
+            )),
+        ])))
+    if not ramos:
+        return 0
+    expr = ramos[0] if len(ramos) == 1 else FilterExpression(
+        or_group=FilterExpressionList(expressions=ramos)
+    )
+
+    rows = client.run_report([], ["activeUsers"], start, end, dimension_filter=expr)
+    return sum(int(r.get("activeUsers", 0) or 0) for r in rows)
+
+
 def categoria_acessos(
     client: GA4Client, categorias_map: dict[str, str], start: str, end: str
 ) -> dict[str, dict]:

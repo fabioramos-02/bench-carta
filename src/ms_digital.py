@@ -19,7 +19,7 @@ def compute_app(start: str, end: str) -> dict:
     'valor' = acessos (nativo) ou cliques (redirect); 'valor_label' identifica.
     """
     from src.ga4.client import get_ga4_client
-    from src.ga4.queries import clicks_metrics, screens_metrics
+    from src.ga4.queries import category_unique_users, clicks_metrics, screens_metrics
 
     ga_start, ga_end = start, end
     ga = get_ga4_client()
@@ -32,10 +32,15 @@ def compute_app(start: str, end: str) -> dict:
         tela_cat = telas.get(cat_key, {})
         servicos: list[dict] = []
         n_nat = n_red = 0
+        # Rótulos GA4 brutos p/ a união de únicos (tela da categoria + serviços).
+        native_labels: list[str] = [dados["ga4"]] if dados.get("ga4") else []
+        redirect_labels: list[str] = []
         for s in dados["servicos"]:
             rotulo = _norm(s.get("ga4") or s["nome"])
+            label = s.get("ga4") or s["nome"]
             if s["tipo"] == "nativo":
                 n_nat += 1
+                native_labels.append(label)
                 m = telas.get(rotulo, {})
                 servicos.append({
                     "nome": s["nome"], "tipo": "nativo", "url": s["url"],
@@ -44,6 +49,7 @@ def compute_app(start: str, end: str) -> dict:
                 })
             else:
                 n_red += 1
+                redirect_labels.append(label)
                 m = cliques.get(rotulo, {})
                 servicos.append({
                     "nome": s["nome"], "tipo": "redirect", "url": s["url"],
@@ -52,10 +58,15 @@ def compute_app(start: str, end: str) -> dict:
                 })
         servicos.sort(key=lambda x: x["pessoas"], reverse=True)
 
-        # Quantitativo da categoria em cascata: tela do app → senão clique
-        # direto (categorias redirect-only: MS.gov, Diário Oficial, Nota MS
-        # Premiada) → senão o maior serviço.
-        if tela_cat.get("pessoas", 0):
+        # Quantitativo da categoria: UNIÃO de únicos sobre todos os serviços
+        # (activeUsers desduplicado). Some das "aberturas" dos serviços vai p/ o
+        # tooltip de volume. Fallback (união=0/erro): cascata tela→clique→maior.
+        uniao = category_unique_users(ga, native_labels, redirect_labels, ga_start, ga_end)
+        if uniao:
+            pessoas = uniao
+            acessos = sum(s["valor"] for s in servicos)
+            fonte = "uniao"
+        elif tela_cat.get("pessoas", 0):
             pessoas, acessos, fonte = tela_cat["pessoas"], tela_cat.get("acessos", 0), "tela"
         elif cliques.get(cat_key, {}).get("pessoas", 0):
             cc = cliques[cat_key]

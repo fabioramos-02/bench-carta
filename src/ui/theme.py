@@ -151,6 +151,22 @@ div[data-testid="stButton"] button [data-testid="stIconMaterial"] {{
 .svc-row .svc-mt {{ color: {SECONDARY}; font-size: .74rem; white-space: nowrap; }}
 .svc-row .svc-lk {{ color: {PRIMARY}; font-size: .78rem; font-weight: 600; text-decoration: none; white-space: nowrap; }}
 .svc-row .svc-lk:hover {{ text-decoration: underline; }}
+
+/* Modal (st.dialog) — largura média (~720px). width="large" do Streamlit fica
+   largo demais; estreitamos sem ocupar a tela toda. */
+div[data-testid="stDialog"] div[role="dialog"] {{
+  width: 720px !important;
+  max-width: 92vw !important;
+}}
+
+/* Legenda pessoas × acessos (rodapé do modal/seções) */
+.metric-legend {{
+  display: flex; gap: 18px; flex-wrap: wrap;
+  border: 0.8px solid {BORDER}; border-radius: 8px; background: {MUTED};
+  padding: 10px 14px; margin: 8px 0 4px;
+}}
+.metric-legend .ml-item {{ font-size: .82rem; color: {INK}; line-height: 1.35; }}
+.metric-legend .ml-k {{ font-weight: 700; color: {PRIMARY}; }}
 </style>
 """
 
