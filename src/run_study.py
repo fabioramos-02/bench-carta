@@ -99,7 +99,6 @@ def _print_summary(result) -> None:
     print("Distribuição entre perfis atribuíveis:")
     for profile, share in result.distribution.items():
         print(f"  - {profile}: {share:.1%} ({result.per_profile_counts[profile]})")
-    print(f"\n>>> RECOMENDAÇÃO: {result.recommendation}")
 
 
 if __name__ == "__main__":

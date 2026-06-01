@@ -49,8 +49,6 @@ def _painel_filtro() -> None:
     st.divider()
     sections.story(result)
     st.divider()
-    sections.recommendation(result)
-    st.divider()
     col1, col2 = st.columns(2)
     with col1:
         sections.distribution_chart(result)
@@ -63,36 +61,42 @@ def _painel_filtro() -> None:
 
 
 @st.cache_data(ttl=3600, show_spinner="Consultando Matomo (workspace)...")
-def _load_portal(mes: str):
-    return compute_portal(mes)
+def _load_portal(period: str, date: str):
+    return compute_portal({"period": period, "date": date})
 
 
 def _secao_workspace(window: dict) -> None:
     """Área logada do portal (gov.br): Entrar → Meu Perfil → Meus Sistemas.
 
-    Acompanha o período do filtro lateral; o mês de referência vai no tooltip
-    (visitante único só é calculável em período fechado no Matomo)."""
-    # window["date"] = "YYYY-MM-DD" ou "YYYY-MM-DD,YYYY-MM-DD" (range).
-    primeira = window.get("date", "").split(",")[0]
-    mes = primeira[:7] if len(primeira) >= 7 else date.today().strftime("%Y-%m")
+    Respeita o período do filtro lateral. O Matomo calcula único em qualquer
+    período fechado (day/week/month/year) → 1 chamada por página; só o range
+    (intervalo livre) zera o único, daí é somado mês-a-mês."""
+    period = window.get("period", "month")
+    date_str = window.get("date", "") or date.today().strftime("%Y-%m")
     st.markdown("### Área logada ms.gov.br")
     st.caption(
         "Jornada do cidadão autenticado: clica em **Entrar** e loga com a conta "
         "**gov.br** (Meu Perfil) → entra na **Área logada** → abre **Meus Sistemas**."
     )
     try:
-        rows = _load_portal(mes)
+        rows = _load_portal(period, date_str)
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Workspace indisponível: {exc}")
         return
+    rotulo = rows[0].get("periodo", date_str) if rows else date_str
     sections.workspace_funnel(rows)
-    cards.workspace_cards(rows, mes)
+    cards.workspace_cards(rows, rotulo)
+    nota_range = (
+        " Para *intervalo livre* o Matomo zera o único, então é somado mês-a-mês — "
+        "quem ficou ativo em mais de um mês conta mais de uma vez."
+        if period == "range" else ""
+    )
     st.info(
         "**Como ler:** o funil cai a cada passo — da multidão que faz login via "
         "gov.br, uma fração entra na área logada e uma fração menor abre Meus "
-        "Sistemas. *Pessoas* = visitantes únicos no mês (o Matomo só calcula único "
-        "em período fechado). Contagem por página, não cohort fechada: os degraus "
-        "são aproximados, não subconjuntos exatos.",
+        "Sistemas. *Pessoas* = visitantes únicos no período do filtro." + nota_range +
+        " Contagem por página, não cohort fechada: os degraus são aproximados, não "
+        "subconjuntos exatos.",
         icon=":material/lightbulb:",
     )
 

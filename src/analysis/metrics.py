@@ -20,7 +20,6 @@ class StudyResult:
     distribution: dict[str, float]
     per_profile_counts: dict[str, int]
     threshold: float
-    recommendation: str
 
 
 def adoption_rate(interactions: int, home_visitors: int) -> float:
@@ -67,5 +66,4 @@ def build_result(
         distribution=profile_distribution(per_profile_counts),
         per_profile_counts=dict(per_profile_counts),
         threshold=threshold,
-        recommendation=decide(corrected, threshold),
     )

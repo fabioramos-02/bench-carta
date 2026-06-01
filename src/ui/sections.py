@@ -147,10 +147,3 @@ def services_chart(df: pd.DataFrame) -> None:
     st.plotly_chart(fig, width="stretch", theme="streamlit")
 
 
-def recommendation(result) -> None:
-    if result.recommendation == "MANTER":
-        st.success(f"### Recomendação: MANTER · uso real {result.corrected_rate:.3%} "
-                   f"≥ meta {result.threshold:.0%}")
-    else:
-        st.error(f"### Recomendação: REMOVER · uso real {result.corrected_rate:.3%} "
-                 f"abaixo da meta de {result.threshold:.0%}")
