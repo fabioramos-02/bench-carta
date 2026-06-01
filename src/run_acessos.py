@@ -79,6 +79,18 @@ def meses_no_intervalo(periodo: str) -> list[str]:
     return meses
 
 
+def meses_do_ano(date_str: str) -> list[str]:
+    """Meses YYYY-MM do ano da `date_str`, do janeiro até o mês corrente (cap).
+
+    Não inclui meses futuros — só geram 0 ou erro no Matomo. Ano passado → 12
+    meses; ano corrente → até o mês de hoje. O filtro 'Anual' é servido como N
+    consultas mensais leves (em vez de 1 query de ano que estoura 504)."""
+    ano = _primeiro_dia(date_str.split(",")[0]).year
+    hoje = date.today()
+    ultimo = 12 if ano < hoje.year else hoje.month
+    return [f"{ano:04d}-{m:02d}" for m in range(1, ultimo + 1)]
+
+
 def _linhas_paginas(matomo, period: str, date: str, rotulo: str) -> list[dict]:
     """Uma chamada de visitante único por página de WORKSPACE_PAGES.
 
@@ -98,20 +110,41 @@ def _linhas_paginas(matomo, period: str, date: str, rotulo: str) -> list[dict]:
     return rows
 
 
-def compute_portal(window: dict | str | None = None) -> list[dict]:
-    """Páginas do Portal (Matomo): pessoas únicas por categoria. Para o painel.
+def _resumo_da_serie(serie: list[dict], rotulo: str) -> list[dict]:
+    """Soma a série mensal por categoria → linhas do funil (resumo do período).
+
+    Soma de únicos mês-a-mês superestima quem ficou ativo em mais de um mês —
+    aproximação, não cohort deduplicada."""
+    acc: dict[str, dict] = {}
+    for r in serie:
+        a = acc.setdefault(
+            r["categoria"],
+            {"categoria": r["categoria"], "pessoas": 0, "acessos": 0, "periodo": rotulo},
+        )
+        a["pessoas"] += r["pessoas"]
+        a["acessos"] += r["acessos"]
+    return list(acc.values())
+
+
+def compute_workspace(window: dict | str | None = None) -> dict:
+    """Dados da seção Área logada: resumo (funil) + série mensal (tendência).
 
     `window` é a janela do filtro lateral:
       - dict {period, date} — period em day/week/month/year/range;
       - str  — 'YYYY-MM', 'YYYY-MM-DD' ou range 'INICIO,FIM' (compat. legado);
       - None — mês corrente.
 
-    O Matomo calcula único em qualquer período fechado (day/week/month/year),
-    então a consulta respeita o período do filtro: 1 chamada por página, com a
-    varredura do tamanho da janela (semana = 7 dias, não o mês inteiro). Só o
-    'range' (intervalo livre) devolve único zerado; aí o período é quebrado em
-    meses e somado mês-a-mês — soma que superestima quem ficou ativo em mais de
-    um mês (aproximação, não cohort deduplicada).
+    Estratégia por período:
+      - day/week/month → 1 chamada/página no período do filtro (único válido).
+      - year → N consultas mensais leves (jan..mês corrente), somadas. Evita a
+        query de ano única que estoura 504 no servidor do portal.
+      - range → quebrado em meses e somado mês-a-mês.
+
+    Retorna {resumo, serie, multi_mes, rotulo}:
+      - resumo: linhas {categoria, pessoas, acessos, periodo} p/ o funil;
+      - serie:  linhas {mes, categoria, pessoas, acessos} p/ a tendência;
+      - multi_mes: True quando há >1 mês (habilita o gráfico de tendência);
+      - rotulo: período legível (mês único 'YYYY-MM' ou faixa 'INI..FIM').
     """
     if isinstance(window, dict):
         period = window.get("period", "month")
@@ -124,23 +157,31 @@ def compute_portal(window: dict | str | None = None) -> list[dict]:
 
     matomo = get_client()
 
-    if period == "range":
-        meses = meses_no_intervalo(date_str)
+    if period in ("year", "range"):
+        meses = meses_do_ano(date_str) if period == "year" else meses_no_intervalo(date_str)
+        meses = meses or [_mes_alvo()]
         rotulo = meses[0] if len(meses) == 1 else f"{meses[0]}..{meses[-1]}"
-        acc: dict[str, dict] = {}
+        serie: list[dict] = []
         for mes in meses:
-            for r in _linhas_paginas(matomo, "month", f"{mes}-01", rotulo):
-                a = acc.setdefault(
-                    r["categoria"],
-                    {"categoria": r["categoria"], "pessoas": 0, "acessos": 0, "periodo": rotulo},
-                )
-                a["pessoas"] += r["pessoas"]
-                a["acessos"] += r["acessos"]
-        return list(acc.values())
+            for r in _linhas_paginas(matomo, "month", f"{mes}-01", mes):
+                serie.append({"mes": mes, **{k: r[k] for k in ("categoria", "pessoas", "acessos")}})
+        return {
+            "resumo": _resumo_da_serie(serie, rotulo),
+            "serie": serie,
+            "multi_mes": len(meses) > 1,
+            "rotulo": rotulo,
+        }
 
-    # day/week/month/year → período fechado em chamada única por página.
+    # day/week/month → período fechado em chamada única por página.
     date_norm = date_str.split(",")[0]
-    return _linhas_paginas(matomo, period, date_norm, date_norm)
+    resumo = _linhas_paginas(matomo, period, date_norm, date_norm)
+    serie = [{"mes": date_norm, **{k: r[k] for k in ("categoria", "pessoas", "acessos")}} for r in resumo]
+    return {"resumo": resumo, "serie": serie, "multi_mes": False, "rotulo": date_norm}
+
+
+def compute_portal(window: dict | str | None = None) -> list[dict]:
+    """Compat: só o resumo (funil) de `compute_workspace`."""
+    return compute_workspace(window)["resumo"]
 
 
 def compute_acessos(mes: str | None = None) -> list[dict]:

@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from src.obs import setup_logging
-from src.run_acessos import compute_portal
+from src.run_acessos import compute_workspace
 from src.run_study import compute
 from src.ui import PROFILE_LABEL, app_view, cards, sections
 from src.ui import sidebar as sb
@@ -61,16 +61,54 @@ def _painel_filtro() -> None:
 
 
 @st.cache_data(ttl=3600, show_spinner="Consultando Matomo (workspace)...")
-def _load_portal(period: str, date: str):
-    return compute_portal({"period": period, "date": date})
+def _load_workspace(period: str, date: str):
+    return compute_workspace({"period": period, "date": date})
+
+
+def _ws_pessoas(resumo: list[dict], categoria: str) -> int:
+    return next((r["pessoas"] for r in resumo if r["categoria"] == categoria), 0)
+
+
+def _delta_mensal(serie: list[dict], categoria: str) -> str | None:
+    """Variação % do último mês vs o penúltimo, para st.metric. None se <2 meses."""
+    pts = sorted(
+        (p for p in serie if p["categoria"] == categoria), key=lambda p: p["mes"]
+    )
+    if len(pts) < 2 or not pts[-2]["pessoas"]:
+        return None
+    var = (pts[-1]["pessoas"] - pts[-2]["pessoas"]) / pts[-2]["pessoas"]
+    return f"{var:+.1%}".replace(".", ",")
+
+
+def _narrativa(serie: list[dict]) -> str:
+    """Frase de tendência do período: variação ponta-a-ponta + mês de pico (Meu Perfil)."""
+    pts = sorted(
+        (p for p in serie if p["categoria"] == "Meu Perfil"), key=lambda p: p["mes"]
+    )
+    if len(pts) < 2:
+        return ""
+    ini, fim = pts[0]["pessoas"], pts[-1]["pessoas"]
+    pico = max(pts, key=lambda p: p["pessoas"])
+    pico_lbl = f"{pico['mes'][5:7]}/{pico['mes'][:4]}"
+    if ini:
+        var = (fim - ini) / ini
+        rumo = "subiu" if var > 0.005 else "caiu" if var < -0.005 else "ficou estável"
+        tend = f" Os logins via gov.br **{rumo}** {abs(var):.0%} de ponta a ponta no período."
+    else:
+        tend = ""
+    return f"{tend} Pico em **{pico_lbl}** ({_br(pico['pessoas'])} pessoas)."
+
+
+def _br(n: float) -> str:
+    return f"{n:,.0f}".replace(",", ".")
 
 
 def _secao_workspace(window: dict) -> None:
     """Área logada do portal (gov.br): Entrar → Meu Perfil → Meus Sistemas.
 
-    Respeita o período do filtro lateral. O Matomo calcula único em qualquer
-    período fechado (day/week/month/year) → 1 chamada por página; só o range
-    (intervalo livre) zera o único, daí é somado mês-a-mês."""
+    Respeita o período do filtro. day/week/month → 1 chamada/página. year e range
+    → série mensal de consultas leves somada (evita a query de ano que estoura 504)
+    e habilita o gráfico de tendência mês a mês."""
     period = window.get("period", "month")
     date_str = window.get("date", "") or date.today().strftime("%Y-%m")
     st.markdown("### Área logada ms.gov.br")
@@ -79,24 +117,41 @@ def _secao_workspace(window: dict) -> None:
         "**gov.br** (Meu Perfil) → entra na **Área logada** → abre **Meus Sistemas**."
     )
     try:
-        rows = _load_portal(period, date_str)
+        data = _load_workspace(period, date_str)
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Workspace indisponível: {exc}")
         return
-    rotulo = rows[0].get("periodo", date_str) if rows else date_str
-    sections.workspace_funnel(rows)
-    cards.workspace_cards(rows, rotulo)
-    nota_range = (
-        " Para *intervalo livre* o Matomo zera o único, então é somado mês-a-mês — "
-        "quem ficou ativo em mais de um mês conta mais de uma vez."
-        if period == "range" else ""
+    resumo, serie, multi_mes = data["resumo"], data["serie"], data["multi_mes"]
+    rotulo = data["rotulo"]
+
+    # KPIs com delta mês-a-mês (delta só quando há série de >1 mês).
+    k1, k2 = st.columns(2)
+    k1.metric(
+        "Meu Perfil — pessoas", _br(_ws_pessoas(resumo, "Meu Perfil")),
+        delta=_delta_mensal(serie, "Meu Perfil") if multi_mes else None,
+        help="Login via gov.br no período. Delta = último mês vs anterior.",
+    )
+    k2.metric(
+        "Meus Sistemas — pessoas", _br(_ws_pessoas(resumo, "Meus Sistemas")),
+        delta=_delta_mensal(serie, "Meus Sistemas") if multi_mes else None,
+        help="Abriram Meus Sistemas no período. Delta = último mês vs anterior.",
+    )
+
+    sections.workspace_funnel(resumo)
+    if multi_mes:
+        sections.workspace_trend(serie)
+
+    cards.workspace_cards(resumo, rotulo)
+    nota_soma = (
+        " Como o período cobre vários meses, os únicos são somados mês a mês — quem "
+        "ficou ativo em mais de um mês conta mais de uma vez (aproximação)."
+        if multi_mes else ""
     )
     st.info(
         "**Como ler:** o funil cai a cada passo — da multidão que faz login via "
         "gov.br, uma fração entra na área logada e uma fração menor abre Meus "
-        "Sistemas. *Pessoas* = visitantes únicos no período do filtro." + nota_range +
-        " Contagem por página, não cohort fechada: os degraus são aproximados, não "
-        "subconjuntos exatos.",
+        "Sistemas. *Pessoas* = visitantes únicos no período do filtro." + nota_soma +
+        _narrativa(serie),
         icon=":material/lightbulb:",
     )
 

@@ -21,11 +21,11 @@ não em achismo.
 
 Duas fontes, dois painéis no dashboard:
 
-| Painel | Fonte | O que mede | Métrica "pessoas" | Métrica "acessos" |
-|---|---|---|---|---|
-| **Portal MS** | Matomo (idSite 298) | Uso do Filtro de Perfil; funil da área logada | `nb_uniq_visitors` (visitante único) | `nb_visits` (visitas) |
-| **MS Digital APP** — nativo | GA4 (tela do app) | Serviços que são telas do app | `activeUsers` | `screenPageViews` |
-| **MS Digital APP** — redirect | GA4 (evento `click`) | Serviços que abrem site externo | `totalUsers` | `eventCount` (rótulo "cliques") |
+| Painel                        | Fonte                | O que mede                                    | Métrica "pessoas"                    | Métrica "acessos"               |
+| ----------------------------- | -------------------- | --------------------------------------------- | ------------------------------------ | ------------------------------- |
+| **Portal MS**                 | Matomo (idSite 298)  | Uso do Filtro de Perfil; funil da área logada | `nb_uniq_visitors` (visitante único) | `nb_visits` (visitas)           |
+| **MS Digital APP** — nativo   | GA4 (tela do app)    | Serviços que são telas do app                 | `activeUsers`                        | `screenPageViews`               |
+| **MS Digital APP** — redirect | GA4 (evento `click`) | Serviços que abrem site externo               | `totalUsers`                         | `eventCount` (rótulo "cliques") |
 
 O total de uma **categoria** do app **não é soma** dos serviços: vem em cascata
 (`pessoas_fonte`) — tela da categoria → senão clique direto → senão o maior serviço.
@@ -40,8 +40,7 @@ O total de uma **categoria** do app **não é soma** dos serviços: vem em casca
 ## 4. Storytelling dos dados (mês 05/2026)
 
 **Filtro de Perfil — uso baixíssimo.** Dos **158.166** visitantes da home, o uso real do
-filtro é **0,101%** — cerca de **1 a cada 990 pessoas**. A meta mínima de decisão é **2%**.
-→ Recomendação atual do painel: **REMOVER** (uso real muito abaixo da meta).
+filtro é **0,101%** — cerca de **1 a cada 990 pessoas**.
 
 **Área logada — funil que decai a cada passo.** No mês, **46.275** pessoas fizeram login
 via gov.br; **9.137** entraram na área logada (`/workspace`); **5.870** abriram
@@ -61,11 +60,11 @@ pessoas dos serviços dá **24.117**. Está errado?
 
 **Veredito: os dados estão consistentes.** Não é soma — é contagem de **únicos**:
 
-| Medida | Valor |
-|---|---|
-| Maior serviço (Cartão SUS Online) | 8.242 pessoas |
+| Medida                                               | Valor              |
+| ---------------------------------------------------- | ------------------ |
+| Maior serviço (Cartão SUS Online)                    | 8.242 pessoas      |
 | **Total da categoria** (tela "Saúde", `activeUsers`) | **10.775 pessoas** |
-| Soma das pessoas dos 11 serviços | 24.117 pessoas |
+| Soma das pessoas dos 11 serviços                     | 24.117 pessoas     |
 
 O total (10.775) cai **entre** o maior serviço (8.242) e a soma (24.117) — exatamente a
 assinatura de uma contagem **desduplicada**. `activeUsers` (GA4) conta cada pessoa **1×
@@ -83,11 +82,11 @@ não bug.
   serviços diferentes conta a mesma pessoa mais de uma vez → sempre dá mais que o real.
   Use o total da categoria para "quantas pessoas", e a soma só para volume relativo.
 
-| Termo técnico | Fonte | Significa |
-|---|---|---|
-| `nb_uniq_visitors` / `nb_visits` | Matomo | pessoas únicas / visitas (portal) |
-| `activeUsers` / `screenPageViews` | GA4 (tela) | pessoas únicas / visualizações (app nativo) |
-| `totalUsers` / `eventCount` | GA4 (clique) | pessoas / cliques (app redirect) |
+| Termo técnico                     | Fonte        | Significa                                   |
+| --------------------------------- | ------------ | ------------------------------------------- |
+| `nb_uniq_visitors` / `nb_visits`  | Matomo       | pessoas únicas / visitas (portal)           |
+| `activeUsers` / `screenPageViews` | GA4 (tela)   | pessoas únicas / visualizações (app nativo) |
+| `totalUsers` / `eventCount`       | GA4 (clique) | pessoas / cliques (app redirect)            |
 
 ## 7. Limitações e nível de confiança
 

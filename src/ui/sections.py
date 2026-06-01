@@ -32,7 +32,6 @@ def kpis(result) -> None:
         f"{result.corrected_rate:.3%}",
         help="Só quem chegou ao serviço pela home, onde o filtro de Perfil fica.",
     )
-    c4.metric("Meta mínima", f"{result.threshold:.0%}", help="Limiar de decisão.")
 
 
 def story(result) -> None:
@@ -101,6 +100,60 @@ def workspace_funnel(rows: list[dict]) -> None:
     )
     fig.update_layout(height=280, margin={"l": 8, "r": 8, "t": 8, "b": 8}, separators=",.")
     st.plotly_chart(fig, width="stretch", theme="streamlit")
+
+
+_WS_TREND_COLOR = {"Meu Perfil": t.PRIMARY, "Meus Sistemas": t.COMPARTILHADO}
+
+
+def workspace_trend(serie: list[dict]) -> None:
+    """Tendência mensal da área logada: pessoas por mês, Perfil × Sistemas.
+
+    Áreas SOBREPOSTAS (não empilhadas): Meus Sistemas é etapa-abaixo de Meu
+    Perfil no funil, não parcela aditiva. Perfil = envelope; Sistemas preenchido
+    por baixo — leitura fiel do funil ao longo do tempo."""
+    if not serie:
+        return
+    df = pd.DataFrame(serie)
+    df = df[df["categoria"].isin(_WS_TREND_COLOR)]
+    if df.empty:
+        return
+    df["rotulo"] = pd.to_datetime(df["mes"] + "-01").dt.strftime("%m/%Y")
+    df = df.sort_values("mes")
+
+    st.subheader("Evolução mês a mês — pessoas na área logada")
+    fig = go.Figure()
+    # Perfil primeiro (envelope maior), Sistemas por cima.
+    for cat in ("Meu Perfil", "Meus Sistemas"):
+        sub = df[df["categoria"] == cat]
+        if sub.empty:
+            continue
+        cor = _WS_TREND_COLOR[cat]
+        fig.add_trace(
+            go.Scatter(
+                x=sub["rotulo"],
+                y=sub["pessoas"],
+                name=cat,
+                mode="lines+markers",
+                line={"color": cor, "width": 2.5},
+                fill="tozeroy",
+                fillcolor=_rgba(cor, 0.18),
+                hovertemplate="%{x}<br>%{y:,.0f} pessoas<extra>" + cat + "</extra>",
+            )
+        )
+    fig.update_xaxes(title_text="")
+    fig.update_yaxes(separatethousands=True, rangemode="tozero")
+    fig.update_layout(
+        height=320, margin={"l": 8, "r": 16, "t": 8, "b": 8}, separators=",.",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.0, "x": 0},
+        hovermode="x unified",
+    )
+    st.plotly_chart(fig, width="stretch", theme="streamlit")
+
+
+def _rgba(hex_color: str, alpha: float) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r},{g},{b},{alpha})"
 
 
 def distribution_chart(result) -> None:
