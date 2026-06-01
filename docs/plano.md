@@ -1,4 +1,4 @@
-# Estudo Matomo — Uso do "Filtro de Perfil" no Portal de Serviços MS
+# Estudo Matomo — Uso do "Filtro de Perfil" no Portal Único
 
 > Decisão a subsidiar: **manter ou remover** os filtros de Órgão e Perfil
 > (provocação da gestora Duda — ATA SGD/SETDIG de 27/05/2026).

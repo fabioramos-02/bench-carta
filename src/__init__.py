@@ -1,1 +1,1 @@
-"""Pacote do estudo bench-carta (Portal MS + app MS Digital)."""
+"""Pacote do estudo bench-carta (Portal Único + app MS Digital)."""

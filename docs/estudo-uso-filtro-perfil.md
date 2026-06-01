@@ -1,4 +1,4 @@
-# Estudo — Uso do Filtro de Perfil no Portal de Serviços MS
+# Estudo — Uso do Filtro de Perfil no Portal Único
 
 **Demanda:** ATA SGD/SETDIG de 27/05/2026 — "Cruzar dados do Matomo para verificar o
 quanto o filtro de Perfil é utilizado no portal." Decisão a subsidiar: manter ou

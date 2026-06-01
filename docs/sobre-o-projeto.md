@@ -1,4 +1,4 @@
-# Sobre o projeto — BI de Acessos do Portal MS e do App MS Digital
+# Sobre o projeto — BI de Acessos do Portal Único e do App MS Digital
 
 > Documento de projeto (gestão + memória técnica). Governo de MS · SETDIG.
 > Repositório: `bench-carta`. Dashboard de produção: https://setdig-dados.streamlit.app/
@@ -7,7 +7,7 @@
 ## 1. Por que este levantamento
 
 A provocação partiu da gestão (ATA SGD/SETDIG de 27/05/2026): **medir o uso real dos
-recursos do Portal de Serviços** (https://www.ms.gov.br) para decidir, com evidência,
+recursos do Portal Único** (https://www.ms.gov.br) para decidir, com evidência,
 se o **Filtro de Perfil** (Cidadão / Servidor / Empresa / Gestão Pública) deve ser
 **mantido ou removido**. Em paralelo, a gestão quer enxergar **como o cidadão usa o app
 MS Digital** — quais categorias e serviços concentram acesso, e quanto do app ainda só
@@ -23,7 +23,7 @@ Duas fontes, dois painéis no dashboard:
 
 | Painel                        | Fonte                | O que mede                                    | Métrica "pessoas"                    | Métrica "acessos"               |
 | ----------------------------- | -------------------- | --------------------------------------------- | ------------------------------------ | ------------------------------- |
-| **Portal MS**                 | Matomo (idSite 298)  | Uso do Filtro de Perfil; funil da área logada | `nb_uniq_visitors` (visitante único) | `nb_visits` (visitas)           |
+| **Portal Único**              | Matomo (idSite 298)  | Uso do Filtro de Perfil; funil da área logada | `nb_uniq_visitors` (visitante único) | `nb_visits` (visitas)           |
 | **MS Digital APP** — nativo   | GA4 (tela do app)    | Serviços que são telas do app                 | `activeUsers`                        | `screenPageViews`               |
 | **MS Digital APP** — redirect | GA4 (evento `click`) | Serviços que abrem site externo               | `totalUsers`                         | `eventCount` (rótulo "cliques") |
 

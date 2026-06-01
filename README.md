@@ -1,4 +1,4 @@
-# bench-carta — Estudo de Uso do Filtro de Perfil (Portal MS)
+# bench-carta — Estudo de Uso do Filtro de Perfil (Portal Único)
 
 Estudo de analytics que mede **o quanto o "filtro de Perfil"** (abas *Serviços em
 Destaque*) é utilizado em `www.ms.gov.br`, para subsidiar a decisão de **manter ou

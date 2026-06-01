@@ -29,7 +29,7 @@ _AGG = ["Dia", "Semana", "Mês", "Ano", "Intervalo de datas"]
 
 
 def _periodo_ga() -> tuple[str, str, str]:
-    """Seletor de período na sidebar, igual ao Portal MS: agregação + calendário
+    """Seletor de período na sidebar, igual ao Portal Único: agregação + calendário
     'Data de referência'. GA4 aceita qualquer intervalo. Retorna (start, end, rótulo).
     """
     hoje = date.today()
@@ -74,7 +74,7 @@ _TIPO_FILTRO = {"Todos": None, "Nativos": "nativo", "Redirecionados": "redirect"
 
 
 def render() -> None:
-    # --- Filtros na lateral (mesma lógica do painel Portal MS) ---------------
+    # --- Filtros na lateral (mesma lógica do painel Portal Único) ---------------
     st.sidebar.header("Filtros")
     start, end, periodo_lbl = _periodo_ga()
     ordenar = st.sidebar.radio("Ordenar por", list(_ORDENAR), index=0)
@@ -265,8 +265,22 @@ def _servico_card(s: dict) -> None:
     st.markdown(html, unsafe_allow_html=True)
 
 
+_TIPO_SERVICO_COR = {"Nativo": t.EXCLUSIVO, "Redirecionado": t.COMPARTILHADO}
+
+
 def _graficos(categorias: list[dict], tot: dict) -> None:
+    cat_sel = _grafico_categorias(categorias)
+    st.divider()
+    _grafico_servicos(categorias, cat_sel)
+    st.divider()
+    _grafico_tipos(tot)
+
+
+def _grafico_categorias(categorias: list[dict]) -> str | None:
+    """Barra de pessoas por categoria. Clicar numa barra seleciona a categoria
+    (filtra o gráfico de serviços abaixo); clicar de novo / fora limpa."""
     st.subheader("Pessoas por categoria")
+    st.caption("Clique numa barra para filtrar os serviços mais acessados abaixo.")
     df = pd.DataFrame(
         [{"Categoria": c["categoria"], "Pessoas": c["pessoas"]} for c in categorias]
     )
@@ -287,19 +301,82 @@ def _graficos(categorias: list[dict], tot: dict) -> None:
         uniformtext={"minsize": 12, "mode": "show"},
         plot_bgcolor="white",
     )
+    event = st.plotly_chart(
+        fig, key="cat_bar", on_select="rerun", selection_mode="points",
+        width="stretch", theme="streamlit",
+    )
+    pts = (event or {}).get("selection", {}).get("points", []) if event else []
+    if pts:
+        return pts[0].get("y") or pts[0].get("label")
+    return None
+
+
+def _grafico_servicos(categorias: list[dict], cat_sel: str | None) -> None:
+    """Top serviços por pessoas (todas as categorias ou só a selecionada na barra)."""
+    rows = [
+        {
+            "Serviço": s["nome"],
+            "Categoria": c["categoria"],
+            "Pessoas": s["pessoas"],
+            "Tipo": "Nativo" if s["tipo"] == "nativo" else "Redirecionado",
+        }
+        for c in categorias
+        if cat_sel is None or c["categoria"] == cat_sel
+        for s in c["servicos"]
+    ]
+    titulo = "Serviços mais acessados"
+    if cat_sel:
+        st.subheader(f"{titulo} — {cat_sel}")
+        st.caption("Filtrado pela categoria selecionada. Clique na barra novamente para limpar.")
+    else:
+        st.subheader(titulo)
+        st.caption("Top serviços por pessoas em todas as categorias do app.")
+    if not rows:
+        st.info("Nenhum serviço com dado no período.")
+        return
+    df = pd.DataFrame(rows)
+    df = df.sort_values("Pessoas", ascending=False).head(15)
+    fig = px.bar(
+        df, x="Pessoas", y="Serviço", orientation="h", text="Pessoas",
+        color="Tipo", color_discrete_map=_TIPO_SERVICO_COR,
+        custom_data=["Categoria", "Tipo"],
+    )
+    fig.update_traces(
+        texttemplate="%{x:,.0f}", textposition="outside",
+        textfont={"size": 14, "color": t.INK}, cliponaxis=False, marker_line_width=0,
+        hovertemplate="%{y}<br>%{x:,.0f} pessoas<br>%{customdata[0]} · %{customdata[1]}<extra></extra>",
+    )
+    fig.update_xaxes(separatethousands=True, showgrid=True, gridcolor=t.BORDER,
+                     title=None, tickfont={"size": 13})
+    fig.update_yaxes(categoryorder="total ascending", title=None,
+                     tickfont={"size": 14, "color": t.INK})
+    fig.update_layout(
+        height=max(320, 36 * len(df) + 80), separators=",.", bargap=0.25,
+        margin={"l": 8, "r": 80, "t": 8, "b": 8},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.0, "x": 0, "title": ""},
+        uniformtext={"minsize": 11, "mode": "show"}, plot_bgcolor="white",
+    )
     st.plotly_chart(fig, width="stretch", theme="streamlit")
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.subheader("Nativos × Redirecionados")
-        donut = pd.DataFrame({
-            "Tipo": ["Nativos", "Redirecionados"],
-            "Serviços": [tot["nativo"], tot["redirect"]],
-        })
-        fig2 = px.pie(donut, names="Tipo", values="Serviços", hole=0.55,
-                      color="Tipo",
-                      color_discrete_map={"Nativos": t.EXCLUSIVO, "Redirecionados": t.COMPARTILHADO})
-        fig2.update_traces(textinfo="label+value+percent")
-        fig2.update_layout(height=300, showlegend=False, separators=",.",
-                           margin={"l": 8, "r": 8, "t": 8, "b": 8})
-        st.plotly_chart(fig2, width="stretch", theme="streamlit")
+
+def _grafico_tipos(tot: dict) -> None:
+    """Donut Nativos × Redirecionados — maior, largura total, com legenda."""
+    st.subheader("Nativos × Redirecionados")
+    st.caption("Proporção de serviços que são telas do app (nativos) × que abrem outro site.")
+    donut = pd.DataFrame({
+        "Tipo": ["Nativos", "Redirecionados"],
+        "Serviços": [tot["nativo"], tot["redirect"]],
+    })
+    fig = px.pie(donut, names="Tipo", values="Serviços", hole=0.55, color="Tipo",
+                 color_discrete_map={"Nativos": t.EXCLUSIVO, "Redirecionados": t.COMPARTILHADO})
+    fig.update_traces(
+        textinfo="label+value+percent", textfont={"size": 16},
+        marker={"line": {"color": "white", "width": 2}},
+        pull=[0, 0.04],
+    )
+    fig.update_layout(
+        height=440, separators=",.", margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        showlegend=True,
+        legend={"orientation": "h", "yanchor": "bottom", "y": -0.05, "x": 0.5, "xanchor": "center"},
+    )
+    st.plotly_chart(fig, width="stretch", theme="streamlit")

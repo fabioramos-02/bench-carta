@@ -1,4 +1,4 @@
-"""BI institucional — Uso do Filtro de Perfil no Portal MS.
+"""BI institucional — Uso do Filtro de Perfil no Portal Único.
 
 Responsabilidade única: orquestração da apresentação. Tema e componentes vivem
 em `src/ui/*`; dados/cálculo em `src/*`. Período é dinâmico (calendário).
@@ -20,7 +20,7 @@ from src.ui import PROFILE_LABEL, app_view, cards, sections
 from src.ui import sidebar as sb
 from src.ui import theme
 
-st.set_page_config(page_title="BI · Portal MS — SETDIG", layout="wide")
+st.set_page_config(page_title="BI · Portal Único — SETDIG", layout="wide")
 
 
 @st.cache_data(ttl=3600, show_spinner="Consultando Matomo...")
@@ -34,7 +34,7 @@ def load(window: dict):
 def _painel_filtro() -> None:
     window, label = sb.period_selector()
     theme.header(
-        "BI — Uso do Filtro de Perfil no Portal de Serviços",
+        "BI — Uso do Filtro de Perfil no Portal Único",
         f"Governo de MS · SETDIG · Matomo idSite=298 · Base: {label}",
     )
 
@@ -165,7 +165,7 @@ def _painel_acessos() -> None:
 
 
 _PAINEIS = {
-    "Portal MS": _painel_filtro,
+    "Portal Único": _painel_filtro,
     "MS Digital APP": _painel_acessos,
 }
 
