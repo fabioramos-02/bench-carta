@@ -8,7 +8,7 @@ Transcrito da relação oficial de categorias/serviços do app + grade da home
 `ga4` guarda o rótulo exato no GA4 quando difere do `nome` (validado por dump
 read-only de telas e cliques). Quando None, casa pelo próprio `nome` normalizado.
 """
-from __future__ import annotations
+from __future__ import annotations 
 
 from collections import Counter
 
